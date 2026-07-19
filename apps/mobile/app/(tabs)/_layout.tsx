@@ -12,7 +12,12 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShadowVisible: false,
+        headerTintColor: activeColor,
+        headerTitleStyle: {
+          color: '#111827',
+          fontWeight: '700',
+        },
         tabBarActiveTintColor: activeColor,
         tabBarInactiveTintColor: inactiveColor,
         tabBarLabelStyle: {
@@ -29,8 +34,9 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="(home)"
         options={{
+          headerShown: false,
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" color={color} size={size} />
@@ -41,6 +47,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="categories"
         options={{
+          headerShown: false,
           title: 'Categories',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="grid-outline" color={color} size={size} />
@@ -67,6 +74,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
     </Tabs>
   );
 }

@@ -1,50 +1,74 @@
-# Welcome to your Expo app 👋
+# Pharmacy MVP
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Premium pharmacy MVP for El Khabiry-inspired mobile ordering.
 
-## Get started
+## Project Structure
 
-1. Install dependencies
+- `apps/mobile`: Expo + React Native + TypeScript mobile app.
+- `apps/api`: Node.js API workspace. Backend implementation comes next.
+- `docs/pharmacy-mvp-plan.md`: agreed MVP product and technical plan.
 
-   ```bash
-   npm install
-   ```
+## Requirements
 
-2. Start the app
+- Node.js 20.19.x or newer for Expo SDK 54.
+- npm.
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Install
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Mobile App
 
-## Learn more
+Start the Expo app:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm start
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Other mobile commands:
 
-## Join the community
+```bash
+npm run mobile:android
+npm run mobile:ios
+npm run mobile:web
+npm run mobile:typecheck
+npm run mobile:lint
+```
 
-Join our community of developers creating universal apps.
+The mobile app uses Expo Router file-based routing under `apps/mobile/app`.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+To point the mobile app at the API, create `apps/mobile/.env` from the example:
+
+```bash
+EXPO_PUBLIC_API_URL=http://localhost:4000
+```
+
+If you test on a physical phone with Expo Go, replace `localhost` with your computer's LAN IP address, for example `http://192.168.1.20:4000`.
+
+## API
+
+The API workspace exists at `apps/api`.
+
+Set up the local SQLite database and seed demo data:
+
+```bash
+npm run api:db:push
+npm run api:db:seed
+```
+
+Start the API:
+
+```bash
+npm run api:dev
+```
+
+API commands:
+
+```bash
+npm run api:typecheck
+npm run api:build
+```
+
+The API runs on `http://localhost:4000` by default.

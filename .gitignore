@@ -41,3 +41,12 @@ app-example
 # generated native folders
 /ios
 /android
+
+# API local data
+apps/mobile/.env
+apps/api/.env
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-*
+apps/api/src/generated/
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
