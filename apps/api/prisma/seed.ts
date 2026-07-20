@@ -10,72 +10,239 @@ const prisma = new PrismaClient({ adapter });
 
 const categories = [
   {
-    name: 'Medicines',
-    slug: 'medicines',
+    name: 'Medication',
+    slug: 'medication',
     description: 'Everyday medicines and pharmacy essentials.',
-    imageUrl: '/images/categories/medicines.jpg',
+    imageUrl: '/images/categories/medication.png',
     sortOrder: 1,
   },
   {
     name: 'Skin Care',
     slug: 'skin-care',
     description: 'Dermatology, cleansers, moisturizers, and sunscreen.',
-    imageUrl: '/images/categories/skin-care.jpg',
+    imageUrl: '/images/categories/skin-care.png',
     sortOrder: 2,
-  },
-  {
-    name: 'Vitamins',
-    slug: 'vitamins',
-    description: 'Supplements for daily wellness and immunity.',
-    imageUrl: '/images/categories/vitamins.jpg',
-    sortOrder: 3,
-  },
-  {
-    name: 'Personal Care',
-    slug: 'personal-care',
-    description: 'Hygiene, oral care, and home health products.',
-    imageUrl: '/images/categories/personal-care.jpg',
-    sortOrder: 4,
-  },
-  {
-    name: 'Baby Care',
-    slug: 'baby-care',
-    description: 'Baby feeding, diapers, bath care, and daily essentials.',
-    imageUrl: '/images/categories/baby-care.jpg',
-    sortOrder: 5,
-  },
-  {
-    name: 'Medical Devices',
-    slug: 'medical-devices',
-    description: 'Home monitoring devices and practical health tools.',
-    imageUrl: '/images/categories/medical-devices.jpg',
-    sortOrder: 6,
-  },
-  {
-    name: 'Oral Care',
-    slug: 'oral-care',
-    description: 'Toothpaste, brushes, mouthwash, and gum care.',
-    imageUrl: '/images/categories/oral-care.jpg',
-    sortOrder: 7,
   },
   {
     name: 'Hair Care',
     slug: 'hair-care',
     description: 'Shampoo, treatments, oils, and scalp care.',
-    imageUrl: '/images/categories/hair-care.jpg',
+    imageUrl: '/images/categories/hair-care.png',
+    sortOrder: 3,
+  },
+  {
+    name: 'Cosmetics',
+    slug: 'cosmetics',
+    description: 'Makeup, lenses, beauty accessories, and cosmetics.',
+    imageUrl: '/images/categories/cosmetics.png',
+    sortOrder: 4,
+  },
+  {
+    name: 'Mom & Baby care',
+    slug: 'mom-baby-care',
+    description: 'Baby feeding, diapers, bath care, and daily essentials.',
+    imageUrl: '/images/categories/mom-baby-care.png',
+    sortOrder: 5,
+  },
+  {
+    name: 'Diet & Fitness',
+    slug: 'diet-fitness',
+    description: 'Nutrition, fitness support, and wellness essentials.',
+    imageUrl: '/images/categories/diet-fitness.png',
+    sortOrder: 6,
+  },
+  {
+    name: 'Vitamins',
+    slug: 'vitamins',
+    description: 'Supplements for daily wellness and immunity.',
+    imageUrl: '/images/categories/vitamins.png',
+    sortOrder: 7,
+  },
+  {
+    name: 'Daily-essentials',
+    slug: 'daily-essentials',
+    description: 'Everyday pharmacy and home health essentials.',
+    imageUrl: '/images/categories/daily-essentials.png',
     sortOrder: 8,
+  },
+  {
+    name: 'Dental-care',
+    slug: 'dental-care',
+    description: 'Toothpaste, brushes, mouthwash, and gum care.',
+    imageUrl: '/images/categories/dental-care.png',
+    sortOrder: 9,
+  },
+  {
+    name: 'Men - care',
+    slug: 'men-care',
+    description: 'Men grooming, shaving, and personal care.',
+    imageUrl: '/images/categories/men-care.png',
+    sortOrder: 10,
+  },
+  {
+    name: 'Personal-care',
+    slug: 'personal-care',
+    description: 'Personal hygiene, body care, and feminine care.',
+    imageUrl: '/images/categories/personal-care.png',
+    sortOrder: 11,
+  },
+  {
+    name: 'Sexual Health',
+    slug: 'sexual-health',
+    description: 'Sexual wellness and family planning essentials.',
+    imageUrl: '/images/categories/sexual-health.png',
+    sortOrder: 12,
+  },
+  {
+    name: 'Women Care',
+    slug: 'women-care',
+    description: 'Feminine care, period care, and women wellness essentials.',
+    imageUrl: '/images/categories/women-care.png',
+    sortOrder: 13,
+  },
+  {
+    name: 'Medical Devices',
+    slug: 'medical-devices',
+    description: 'Home monitoring devices and practical health tools.',
+    imageUrl: '/images/categories/medical-devices.png',
+    sortOrder: 14,
   },
 ];
 
 const productImagesByCategorySlug: Record<string, string> = {
-  medicines: '/images/products/medicines.jpg',
+  medication: '/images/products/medicines.jpg',
   'skin-care': '/images/products/skin-care.jpg',
-  vitamins: '/images/products/vitamins.jpg',
-  'personal-care': '/images/products/personal-care.jpg',
-  'baby-care': '/images/products/baby-care.jpg',
-  'medical-devices': '/images/products/medical-devices.jpg',
-  'oral-care': '/images/products/oral-care.jpg',
   'hair-care': '/images/products/hair-care.jpg',
+  cosmetics: '/images/products/personal-care.jpg',
+  'mom-baby-care': '/images/products/baby-care.jpg',
+  'diet-fitness': '/images/products/vitamins.jpg',
+  vitamins: '/images/products/vitamins.jpg',
+  'daily-essentials': '/images/products/medical-devices.jpg',
+  'dental-care': '/images/products/oral-care.jpg',
+  'men-care': '/images/products/personal-care.jpg',
+  'personal-care': '/images/products/personal-care.jpg',
+  'sexual-health': '/images/products/personal-care.jpg',
+  'women-care': '/images/products/personal-care.jpg',
+  'medical-devices': '/images/products/medical-devices.jpg',
+};
+
+const subcategoryImagesBySlug: Record<string, string> = {
+  'pain-relief': '/images/categories/pain-relief.png',
+  'cold-flu': '/images/categories/cold-flu.png',
+  'throat-care': '/images/categories/throat-care.png',
+  'nasal-care': '/images/categories/nasal-care.png',
+  cleansers: '/images/categories/cleansers.png',
+  moisturizers: '/images/categories/moisturizers.png',
+  sunscreen: '/images/categories/sunscreen.png',
+  'skin-treatments': '/images/categories/skin-treatments.png',
+  shampoo: '/images/categories/shampoo.png',
+  'hair-oils': '/images/categories/hair-oils.png',
+  'hair-treatments': '/images/categories/hair-treatments.png',
+  'scalp-care': '/images/categories/scalp-care.png',
+  'all-cosmetics': '/images/categories/all-cosmetics.png',
+  'beauty-accessories': '/images/categories/beauty-accessories.png',
+  lenses: '/images/categories/lenses.png',
+  'make-up': '/images/categories/make-up.png',
+  diapers: '/images/categories/diapers.png',
+  'baby-bath': '/images/categories/baby-bath.png',
+  'diaper-rash': '/images/categories/diaper-rash.png',
+  feeding: '/images/categories/feeding.png',
+  'diet-support': '/images/categories/diet-support.png',
+  'fitness-care': '/images/categories/fitness-care.png',
+  'protein-nutrition': '/images/categories/protein-nutrition.png',
+  'weight-control': '/images/categories/weight-control.png',
+};
+
+const subcategories = [
+  { categorySlug: 'medication', name: 'Pain Relief', slug: 'pain-relief', sortOrder: 1 },
+  { categorySlug: 'medication', name: 'Cold & Flu', slug: 'cold-flu', sortOrder: 2 },
+  { categorySlug: 'medication', name: 'Throat Care', slug: 'throat-care', sortOrder: 3 },
+  { categorySlug: 'medication', name: 'Nasal Care', slug: 'nasal-care', sortOrder: 4 },
+  { categorySlug: 'skin-care', name: 'Cleansers', slug: 'cleansers', sortOrder: 1 },
+  { categorySlug: 'skin-care', name: 'Moisturizers', slug: 'moisturizers', sortOrder: 2 },
+  { categorySlug: 'skin-care', name: 'Sunscreen', slug: 'sunscreen', sortOrder: 3 },
+  { categorySlug: 'skin-care', name: 'Treatments', slug: 'skin-treatments', sortOrder: 4 },
+  { categorySlug: 'hair-care', name: 'Shampoo', slug: 'shampoo', sortOrder: 1 },
+  { categorySlug: 'hair-care', name: 'Hair Oils', slug: 'hair-oils', sortOrder: 2 },
+  { categorySlug: 'hair-care', name: 'Treatments', slug: 'hair-treatments', sortOrder: 3 },
+  { categorySlug: 'hair-care', name: 'Scalp Care', slug: 'scalp-care', sortOrder: 4 },
+  { categorySlug: 'cosmetics', name: 'All Cosmetics', slug: 'all-cosmetics', sortOrder: 1 },
+  { categorySlug: 'cosmetics', name: 'Beauty accessories', slug: 'beauty-accessories', sortOrder: 2 },
+  { categorySlug: 'cosmetics', name: 'Lenses', slug: 'lenses', sortOrder: 3 },
+  { categorySlug: 'cosmetics', name: 'Make Up', slug: 'make-up', sortOrder: 4 },
+  { categorySlug: 'mom-baby-care', name: 'Diapers', slug: 'diapers', sortOrder: 1 },
+  { categorySlug: 'mom-baby-care', name: 'Baby Bath', slug: 'baby-bath', sortOrder: 2 },
+  { categorySlug: 'mom-baby-care', name: 'Diaper Rash', slug: 'diaper-rash', sortOrder: 3 },
+  { categorySlug: 'mom-baby-care', name: 'Feeding', slug: 'feeding', sortOrder: 4 },
+  { categorySlug: 'diet-fitness', name: 'Diet Support', slug: 'diet-support', sortOrder: 1 },
+  { categorySlug: 'diet-fitness', name: 'Fitness Care', slug: 'fitness-care', sortOrder: 2 },
+  { categorySlug: 'diet-fitness', name: 'Protein & Nutrition', slug: 'protein-nutrition', sortOrder: 3 },
+  { categorySlug: 'diet-fitness', name: 'Weight Control', slug: 'weight-control', sortOrder: 4 },
+  { categorySlug: 'vitamins', name: 'Multivitamins', slug: 'multivitamins', sortOrder: 1 },
+  { categorySlug: 'vitamins', name: 'Immunity', slug: 'immunity', sortOrder: 2 },
+  { categorySlug: 'vitamins', name: 'Omega', slug: 'omega', sortOrder: 3 },
+  { categorySlug: 'vitamins', name: 'Bone Health', slug: 'bone-health', sortOrder: 4 },
+  { categorySlug: 'daily-essentials', name: 'Home Health', slug: 'home-health', sortOrder: 1 },
+  { categorySlug: 'daily-essentials', name: 'First Aid', slug: 'first-aid', sortOrder: 2 },
+  { categorySlug: 'daily-essentials', name: 'Sanitizers', slug: 'sanitizers', sortOrder: 3 },
+  { categorySlug: 'daily-essentials', name: 'Masks & Gloves', slug: 'masks-gloves', sortOrder: 4 },
+  { categorySlug: 'dental-care', name: 'Toothpaste', slug: 'toothpaste', sortOrder: 1 },
+  { categorySlug: 'dental-care', name: 'Toothbrushes', slug: 'toothbrushes', sortOrder: 2 },
+  { categorySlug: 'dental-care', name: 'Mouthwash', slug: 'mouthwash', sortOrder: 3 },
+  { categorySlug: 'dental-care', name: 'Sensitive Teeth', slug: 'sensitive-teeth', sortOrder: 4 },
+  { categorySlug: 'men-care', name: 'Shaving', slug: 'shaving', sortOrder: 1 },
+  { categorySlug: 'men-care', name: 'Deodorants', slug: 'deodorants', sortOrder: 2 },
+  { categorySlug: 'men-care', name: 'Men Grooming', slug: 'men-grooming', sortOrder: 3 },
+  { categorySlug: 'men-care', name: 'Men Skin Care', slug: 'men-skin-care', sortOrder: 4 },
+  { categorySlug: 'personal-care', name: 'Hygiene', slug: 'hygiene', sortOrder: 1 },
+  { categorySlug: 'personal-care', name: 'Body Care', slug: 'body-care', sortOrder: 2 },
+  { categorySlug: 'personal-care', name: 'Hand Care', slug: 'hand-care', sortOrder: 3 },
+  { categorySlug: 'personal-care', name: 'Bath Care', slug: 'bath-care', sortOrder: 4 },
+  { categorySlug: 'sexual-health', name: 'Condoms', slug: 'condoms', sortOrder: 1 },
+  { categorySlug: 'sexual-health', name: 'Lubricants', slug: 'lubricants', sortOrder: 2 },
+  { categorySlug: 'sexual-health', name: 'Pregnancy Tests', slug: 'pregnancy-tests', sortOrder: 3 },
+  { categorySlug: 'sexual-health', name: 'Family Planning', slug: 'family-planning', sortOrder: 4 },
+  { categorySlug: 'women-care', name: 'Feminine Care', slug: 'feminine-care', sortOrder: 1 },
+  { categorySlug: 'women-care', name: 'Period Care', slug: 'period-care', sortOrder: 2 },
+  { categorySlug: 'women-care', name: 'Intimate Care', slug: 'intimate-care', sortOrder: 3 },
+  { categorySlug: 'women-care', name: 'Women Wellness', slug: 'women-wellness', sortOrder: 4 },
+  { categorySlug: 'medical-devices', name: 'Blood Pressure', slug: 'blood-pressure', sortOrder: 1 },
+  { categorySlug: 'medical-devices', name: 'Diabetes Care', slug: 'diabetes-care', sortOrder: 2 },
+  { categorySlug: 'medical-devices', name: 'Oximeters', slug: 'oximeters', sortOrder: 3 },
+  { categorySlug: 'medical-devices', name: 'Thermometers', slug: 'thermometers', sortOrder: 4 },
+];
+
+const productSubcategoryBySlug: Record<string, string> = {
+  'panadol-extra': 'pain-relief',
+  'brufen-400-mg': 'pain-relief',
+  congestal: 'cold-flu',
+  'strepsils-honey-lemon': 'throat-care',
+  'otrivin-nasal-spray': 'nasal-care',
+  'cerave-moisturizing-cream': 'moisturizers',
+  'la-roche-posay-anthelios-spf-50': 'sunscreen',
+  'bioderma-sensibio-h2o': 'cleansers',
+  'eva-b-white-day-cream': 'skin-treatments',
+  'the-ordinary-niacinamide-10': 'skin-treatments',
+  'vitamin-c-1000-mg': 'immunity',
+  'centrum-advance': 'multivitamins',
+  'omega-3-plus': 'omega',
+  'calcium-d3f': 'bone-health',
+  'digital-thermometer': 'thermometers',
+  'dettol-antiseptic-liquid': 'hygiene',
+  'nivea-soft-cream': 'body-care',
+  'always-ultra-normal': 'feminine-care',
+  'pampers-premium-care': 'diapers',
+  'johnson-baby-shampoo': 'baby-bath',
+  sudocrem: 'diaper-rash',
+  'blood-pressure-monitor': 'blood-pressure',
+  'accu-chek-active-glucose-meter': 'diabetes-care',
+  'pulse-oximeter': 'oximeters',
+  'sensodyne-repair-protect': 'sensitive-teeth',
+  'listerine-cool-mint': 'mouthwash',
+  'oral-b-pro-expert-toothbrush': 'toothbrushes',
+  'vichy-dercos-anti-dandruff-shampoo': 'scalp-care',
+  'pantene-pro-v-shampoo': 'shampoo',
+  'mielle-rosemary-mint-oil': 'hair-oils',
 };
 
 const brands = [
@@ -108,7 +275,7 @@ const brands = [
 
 const products = [
   {
-    categorySlug: 'medicines',
+    categorySlug: 'medication',
     brandSlug: 'panadol',
     name: 'Panadol Extra',
     slug: 'panadol-extra',
@@ -118,7 +285,7 @@ const products = [
     isPopular: true,
   },
   {
-    categorySlug: 'medicines',
+    categorySlug: 'medication',
     brandSlug: 'brufen',
     name: 'Brufen 400 mg',
     slug: 'brufen-400-mg',
@@ -128,7 +295,7 @@ const products = [
     isPopular: true,
   },
   {
-    categorySlug: 'medicines',
+    categorySlug: 'medication',
     brandSlug: 'congestal',
     name: 'Congestal',
     slug: 'congestal',
@@ -138,7 +305,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'medicines',
+    categorySlug: 'medication',
     brandSlug: 'strepsils',
     name: 'Strepsils Honey & Lemon',
     slug: 'strepsils-honey-lemon',
@@ -148,7 +315,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'medicines',
+    categorySlug: 'medication',
     brandSlug: 'otrivin',
     name: 'Otrivin Nasal Spray',
     slug: 'otrivin-nasal-spray',
@@ -248,7 +415,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'personal-care',
+    categorySlug: 'medical-devices',
     brandSlug: 'health-essentials',
     name: 'Digital Thermometer',
     slug: 'digital-thermometer',
@@ -258,7 +425,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'personal-care',
+    categorySlug: 'women-care',
     brandSlug: 'dettol',
     name: 'Dettol Antiseptic Liquid',
     slug: 'dettol-antiseptic-liquid',
@@ -288,7 +455,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'baby-care',
+    categorySlug: 'mom-baby-care',
     brandSlug: 'pampers',
     name: 'Pampers Premium Care',
     slug: 'pampers-premium-care',
@@ -298,7 +465,7 @@ const products = [
     isPopular: true,
   },
   {
-    categorySlug: 'baby-care',
+    categorySlug: 'mom-baby-care',
     brandSlug: 'johnsons',
     name: 'Johnson Baby Shampoo',
     slug: 'johnson-baby-shampoo',
@@ -308,7 +475,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'baby-care',
+    categorySlug: 'mom-baby-care',
     brandSlug: 'sudocrem',
     name: 'Sudocrem',
     slug: 'sudocrem',
@@ -348,7 +515,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'oral-care',
+    categorySlug: 'dental-care',
     brandSlug: 'sensodyne',
     name: 'Sensodyne Repair & Protect',
     slug: 'sensodyne-repair-protect',
@@ -358,7 +525,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'oral-care',
+    categorySlug: 'dental-care',
     brandSlug: 'listerine',
     name: 'Listerine Cool Mint',
     slug: 'listerine-cool-mint',
@@ -368,7 +535,7 @@ const products = [
     isPopular: false,
   },
   {
-    categorySlug: 'oral-care',
+    categorySlug: 'dental-care',
     brandSlug: 'oral-b',
     name: 'Oral-B Pro-Expert Toothbrush',
     slug: 'oral-b-pro-expert-toothbrush',
@@ -435,6 +602,33 @@ const offers = [
   },
 ];
 
+const branches = [
+  {
+    address: 'Makram Ebeid, Nasr City, Cairo',
+    hours: 'Open 24 hours',
+    name: 'Nasr City branch',
+    phone: '01000000000',
+    slug: 'nasr-city',
+    sortOrder: 1,
+  },
+  {
+    address: 'Road 9, Maadi, Cairo',
+    hours: 'Open 9:00 AM - 12:00 AM',
+    name: 'Maadi branch',
+    phone: '01000000001',
+    slug: 'maadi',
+    sortOrder: 2,
+  },
+  {
+    address: 'South 90 Street, New Cairo',
+    hours: 'Open 9:00 AM - 1:00 AM',
+    name: 'New Cairo branch',
+    phone: '01000000002',
+    slug: 'new-cairo',
+    sortOrder: 3,
+  },
+];
+
 async function main() {
   for (const brand of brands) {
     await prisma.brand.upsert({
@@ -452,6 +646,31 @@ async function main() {
     });
   }
 
+  for (const subcategory of subcategories) {
+    const category = await prisma.category.findUniqueOrThrow({
+      where: { slug: subcategory.categorySlug },
+    });
+    const { categorySlug: _categorySlug, ...subcategoryData } = subcategory;
+
+    await prisma.subcategory.upsert({
+      where: { slug: subcategory.slug },
+      update: {
+        ...subcategoryData,
+        categoryId: category.id,
+        imageUrl:
+          subcategoryImagesBySlug[subcategory.slug] ??
+          productImagesByCategorySlug[subcategory.categorySlug],
+      },
+      create: {
+        ...subcategoryData,
+        categoryId: category.id,
+        imageUrl:
+          subcategoryImagesBySlug[subcategory.slug] ??
+          productImagesByCategorySlug[subcategory.categorySlug],
+      },
+    });
+  }
+
   for (const product of products) {
     const category = await prisma.category.findUniqueOrThrow({
       where: { slug: product.categorySlug },
@@ -459,6 +678,12 @@ async function main() {
     const brand = await prisma.brand.findUniqueOrThrow({
       where: { slug: product.brandSlug },
     });
+    const subcategorySlug = productSubcategoryBySlug[product.slug];
+    const subcategory = subcategorySlug
+      ? await prisma.subcategory.findUniqueOrThrow({
+          where: { slug: subcategorySlug },
+        })
+      : null;
 
     const { categorySlug: _categorySlug, brandSlug: _brandSlug, ...productData } = product;
     const imageUrl = productImagesByCategorySlug[product.categorySlug];
@@ -469,22 +694,48 @@ async function main() {
         ...productData,
         brandId: brand.id,
         categoryId: category.id,
+        subcategoryId: subcategory?.id ?? null,
         imageUrl,
       },
       create: {
         ...productData,
         brandId: brand.id,
         categoryId: category.id,
+        subcategoryId: subcategory?.id ?? null,
         imageUrl,
       },
     });
   }
+
+  await prisma.subcategory.deleteMany({
+    where: {
+      slug: {
+        notIn: subcategories.map((subcategory) => subcategory.slug),
+      },
+    },
+  });
+
+  await prisma.category.deleteMany({
+    where: {
+      slug: {
+        notIn: categories.map((category) => category.slug),
+      },
+    },
+  });
 
   for (const offer of offers) {
     await prisma.offer.upsert({
       where: { id: offer.id },
       update: offer,
       create: offer,
+    });
+  }
+
+  for (const branch of branches) {
+    await prisma.branch.upsert({
+      where: { slug: branch.slug },
+      update: branch,
+      create: branch,
     });
   }
 }

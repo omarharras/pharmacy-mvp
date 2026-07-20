@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 
 const createOrderSchema = z
   .object({
+    type: z.enum(['PRODUCT_ORDER', 'PRESCRIPTION_REQUEST']),
     customer: z.object({
       name: z.string().min(2),
       phone: z.string().min(8),
@@ -19,12 +20,32 @@ const createOrderSchema = z
       )
       .default([]),
     prescriptionUploadIds: z.array(z.string().min(1)).default([]),
+    checkout: z
+      .object({
+        fulfillmentMethod: z.enum(['DELIVERY', 'PICKUP']).default('DELIVERY'),
+        deliveryDate: z.string().min(1).optional(),
+        deliveryTimeSlot: z.string().min(1).optional(),
+        paymentMethod: z
+          .enum(['ONLINE', 'CASH_ON_DELIVERY', 'CARD_ON_DELIVERY'])
+          .default('CASH_ON_DELIVERY'),
+        confirmByCall: z.boolean().default(false),
+        deliveryFeePiasters: z.number().int().nonnegative().default(0),
+      })
+      .default({
+        confirmByCall: false,
+        deliveryFeePiasters: 0,
+        fulfillmentMethod: 'DELIVERY',
+        paymentMethod: 'CASH_ON_DELIVERY',
+      }),
     notes: z.string().optional(),
   })
-  .refine(
-    (data) => data.items.length > 0 || data.prescriptionUploadIds.length > 0,
-    'Add at least one product or prescription',
-  );
+  .refine((data) => {
+    if (data.type === 'PRODUCT_ORDER') {
+      return data.items.length > 0 && data.prescriptionUploadIds.length === 0;
+    }
+
+    return data.prescriptionUploadIds.length > 0 && data.items.length === 0;
+  }, 'Product orders require products only; prescription requests require prescriptions only');
 
 export const ordersRouter = Router();
 
@@ -111,10 +132,19 @@ ordersRouter.post('/', async (request, response, next) => {
 
     const order = await prisma.order.create({
       data: {
+        type: parsed.data.type,
         customerName: parsed.data.customer.name,
         customerPhone: parsed.data.customer.phone,
         address: parsed.data.customer.address,
+        fulfillmentMethod: parsed.data.checkout.fulfillmentMethod,
+        deliveryDate: parsed.data.checkout.deliveryDate,
+        deliveryTimeSlot: parsed.data.checkout.deliveryTimeSlot,
+        paymentMethod: parsed.data.checkout.paymentMethod,
+        pricingStatus: parsed.data.type === 'PRESCRIPTION_REQUEST' ? 'PENDING_REVIEW' : 'NOT_REQUIRED',
+        confirmByCall: parsed.data.checkout.confirmByCall,
+        deliveryFeePiasters: parsed.data.checkout.deliveryFeePiasters,
         notes: parsed.data.notes,
+        status: parsed.data.type === 'PRESCRIPTION_REQUEST' ? 'PENDING_REVIEW' : 'RECEIVED',
         items: {
           create: parsed.data.items.map((item) => {
             const product = productById.get(item.productId);

@@ -67,6 +67,7 @@ export default function ProductDetailScreen() {
             {resolveImageUrl(product.imageUrl) ? (
               <Image
                 source={{ uri: resolveImageUrl(product.imageUrl) ?? undefined }}
+                resizeMode="contain"
                 style={styles.productPhoto}
               />
             ) : (
@@ -96,7 +97,7 @@ export default function ProductDetailScreen() {
 
           {getProductQuantity(product.id) > 0 ? (
             <View style={styles.detailQuantityRow}>
-              <Text style={styles.detailQuantityLabel}>Quantity in request</Text>
+              <Text style={styles.detailQuantityLabel}>Quantity in cart</Text>
               <QuantityControl
                 quantity={getProductQuantity(product.id)}
                 onIncrement={() => addProduct(product)}
@@ -105,7 +106,7 @@ export default function ProductDetailScreen() {
             </View>
           ) : (
             <Pressable style={styles.addButton} onPress={() => addProduct(product)}>
-              <Text style={styles.addButtonText}>Add to request</Text>
+              <Text style={styles.addButtonText}>Add to cart</Text>
             </Pressable>
           )}
         </>
@@ -141,11 +142,11 @@ const styles = StyleSheet.create({
   },
   productPhoto: {
     borderRadius: 20,
-    height: '100%',
-    width: '100%',
+    height: '88%',
+    width: '88%',
   },
   categoryText: {
-    color: '#087F5B',
+    color: '#00A9A5',
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 8,
@@ -179,14 +180,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   price: {
-    color: '#087F5B',
+    color: '#00A9A5',
     fontSize: 22,
     fontWeight: '800',
   },
   stockBadge: {
-    backgroundColor: '#E7F5EF',
+    backgroundColor: '#E6F8F7',
     borderRadius: 999,
-    color: '#087F5B',
+    color: '#00A9A5',
     fontSize: 12,
     fontWeight: '800',
     paddingHorizontal: 12,
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     alignItems: 'center',
-    backgroundColor: '#087F5B',
+    backgroundColor: '#00A9A5',
     borderRadius: 14,
     height: 54,
     justifyContent: 'center',
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   },
   stateBox: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#D8F3E8',
+    borderColor: '#CFF2F1',
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 20,

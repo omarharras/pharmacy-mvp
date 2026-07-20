@@ -8,12 +8,27 @@ datasource db {
 }
 
 model Category {
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique
+  description   String?
+  imageUrl      String?
+  sortOrder     Int           @default(0)
+  products      Product[]
+  subcategories Subcategory[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Subcategory {
   id          String    @id @default(cuid())
+  categoryId  String
   name        String
   slug        String    @unique
   description String?
   imageUrl    String?
   sortOrder   Int       @default(0)
+  category    Category  @relation(fields: [categoryId], references: [id])
   products    Product[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -34,6 +49,7 @@ model Brand {
 model Product {
   id            String      @id @default(cuid())
   categoryId    String
+  subcategoryId String?
   brandId       String?
   name          String
   slug          String      @unique
@@ -44,6 +60,7 @@ model Product {
   inStock       Boolean     @default(true)
   isPopular     Boolean     @default(false)
   category      Category    @relation(fields: [categoryId], references: [id])
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
   brand         Brand?      @relation(fields: [brandId], references: [id])
   orderItems    OrderItem[]
   createdAt     DateTime    @default(now())
@@ -73,17 +90,58 @@ model PrescriptionUpload {
   createdAt    DateTime @default(now())
 }
 
+model Address {
+  id              String   @id @default(cuid())
+  addressName     String
+  fullName        String
+  phone           String
+  additionalPhone String?
+  city            String
+  area            String
+  street          String
+  building        String
+  floor           String?
+  apartment       String?
+  landmark        String?
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  address   String
+  phone     String
+  hours     String
+  latitude  Float?
+  longitude Float?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Order {
-  id            String               @id @default(cuid())
-  customerName  String
-  customerPhone String
-  address       String
-  notes         String?
-  status        OrderStatus          @default(RECEIVED)
-  items         OrderItem[]
-  prescriptions PrescriptionUpload[]
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  id                  String               @id @default(cuid())
+  type                OrderType            @default(PRODUCT_ORDER)
+  customerName        String
+  customerPhone       String
+  address             String
+  fulfillmentMethod   FulfillmentMethod    @default(DELIVERY)
+  deliveryDate        String?
+  deliveryTimeSlot    String?
+  paymentMethod       PaymentMethod        @default(CASH_ON_DELIVERY)
+  pricingStatus       PricingStatus        @default(NOT_REQUIRED)
+  confirmByCall       Boolean              @default(false)
+  deliveryFeePiasters Int                  @default(0)
+  notes               String?
+  status              OrderStatus          @default(RECEIVED)
+  items               OrderItem[]
+  prescriptions       PrescriptionUpload[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model OrderItem {
@@ -97,8 +155,31 @@ model OrderItem {
 }
 
 enum OrderStatus {
+  PENDING_REVIEW
   RECEIVED
   PREPARING
   OUT_FOR_DELIVERY
   DELIVERED
+}
+
+enum OrderType {
+  PRODUCT_ORDER
+  PRESCRIPTION_REQUEST
+}
+
+enum FulfillmentMethod {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  ONLINE
+  CASH_ON_DELIVERY
+  CARD_ON_DELIVERY
+}
+
+enum PricingStatus {
+  NOT_REQUIRED
+  PENDING_REVIEW
+  PRICED
 }

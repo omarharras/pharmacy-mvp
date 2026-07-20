@@ -2,6 +2,8 @@ import cors from 'cors';
 import express from 'express';
 
 import { brandsRouter } from './routes/brands';
+import { addressesRouter } from './routes/addresses';
+import { branchesRouter } from './routes/branches';
 import { categoriesRouter } from './routes/categories';
 import { healthRouter } from './routes/health';
 import { offersRouter } from './routes/offers';
@@ -17,7 +19,9 @@ app.use('/images', express.static('public/images'));
 app.use('/uploads', express.static('uploads'));
 
 app.use('/health', healthRouter);
+app.use('/addresses', addressesRouter);
 app.use('/brands', brandsRouter);
+app.use('/branches', branchesRouter);
 app.use('/categories', categoriesRouter);
 app.use('/products', productsRouter);
 app.use('/offers', offersRouter);

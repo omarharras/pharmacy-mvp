@@ -1,14 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Link, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  Alert,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
+import { ProductCard } from '@/components/product-card';
 import {
   Brand,
   Category,
@@ -20,8 +26,6 @@ import {
   getProducts,
   resolveImageUrl,
 } from '@/lib/api';
-import { QuantityControl } from '@/components/quantity-control';
-import { useRequest } from '@/lib/request-context';
 
 type HomeData = {
   brands: Brand[];
@@ -30,16 +34,55 @@ type HomeData = {
   products: Product[];
 };
 
+const colors = {
+  brand: '#00A9A5',
+  brandDark: '#007F7B',
+  brandSoft: '#E6F8F7',
+  border: '#E5E7EB',
+  page: '#F7F8FA',
+  text: '#111827',
+  muted: '#6B7280',
+  white: '#FFFFFF',
+};
+
+const bannerImageUrls = [
+  '/images/banners/prescription-upload-banner.png?v=5',
+  '/images/banners/monthly-wellness-banner.png?v=5',
+  '/images/banners/skin-care-banner.png?v=5',
+  '/images/banners/baby-care-delivered-banner.png?v=5',
+  '/images/banners/weekly-pharmacy-offers-banner.png?v=5',
+  '/images/banners/chronic-care-refills-banner.png?v=5',
+];
+
+const promoGap = 12;
+const promoPeek = 18;
+const promoSideInset = promoPeek + promoGap;
+
+type PromoSlide = {
+  href: '/categories' | '/request';
+  imageUrl: string | null;
+  params?: {
+    type: 'prescription';
+  };
+  title: string;
+};
+
 export default function HomeScreen() {
-  const { addProduct, decrementProduct, getProductQuantity } = useRequest();
+  const router = useRouter();
+  const promoScrollRef = useRef<ScrollView>(null);
+  const activePromoIndexRef = useRef(0);
+  const { width: screenWidth } = useWindowDimensions();
   const [homeData, setHomeData] = useState<HomeData>({
     brands: [],
     categories: [],
     offers: [],
     products: [],
   });
+  const [activePromoIndex, setActivePromoIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const promoWidth = Math.max(screenWidth - promoSideInset * 2, 1);
+  const promoHeight = Math.round(promoWidth / 2.05);
 
   const loadHomeData = useCallback(async () => {
     setIsLoading(true);
@@ -65,265 +108,482 @@ export default function HomeScreen() {
     void loadHomeData();
   }, [loadHomeData]);
 
-  const featuredOffer = homeData.offers[0];
   const popularProducts = useMemo(
-    () => homeData.products.filter((product) => product.isPopular).slice(0, 2),
+    () => homeData.products.filter((product) => product.isPopular).slice(0, 6),
     [homeData.products],
   );
+  const promoSlides = useMemo<PromoSlide[]>(() => {
+    return bannerImageUrls.map((imageUrl) => {
+      const isPrescriptionBanner = imageUrl.includes('prescription');
+
+      return {
+        href: isPrescriptionBanner ? '/request' : '/categories',
+        imageUrl,
+        params: isPrescriptionBanner ? { type: 'prescription' as const } : undefined,
+        title: imageUrl,
+      };
+    });
+  }, []);
+  const loopedPromoSlides = useMemo(() => {
+    if (promoSlides.length <= 1) {
+      return promoSlides.map((slide, index) => ({ ...slide, loopKey: `single-${index}` }));
+    }
+
+    return [
+      { ...promoSlides[promoSlides.length - 1], loopKey: 'buffer-start' },
+      ...promoSlides.map((slide, index) => ({ ...slide, loopKey: `real-${index}` })),
+      { ...promoSlides[0], loopKey: 'buffer-end' },
+    ];
+  }, [promoSlides]);
+  const promoStep = promoWidth + promoGap;
+
+  const setPromoIndex = useCallback((nextIndex: number) => {
+    activePromoIndexRef.current = nextIndex;
+    setActivePromoIndex(nextIndex);
+  }, []);
+
+  useEffect(() => {
+    if (promoSlides.length <= 1) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      promoScrollRef.current?.scrollTo({ animated: false, x: promoStep });
+    });
+  }, [promoSlides.length, promoStep]);
+
+  useEffect(() => {
+    if (promoSlides.length <= 1) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      const nextLoopIndex = activePromoIndexRef.current + 2;
+      promoScrollRef.current?.scrollTo({
+        animated: true,
+        x: nextLoopIndex * promoStep,
+      });
+    }, 4200);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [promoSlides.length, promoStep]);
+
+  const handlePromoScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const rawIndex = Math.round(event.nativeEvent.contentOffset.x / promoStep);
+
+    if (promoSlides.length <= 1) {
+      setPromoIndex(0);
+      return;
+    }
+
+    if (rawIndex === 0) {
+      setPromoIndex(promoSlides.length - 1);
+      requestAnimationFrame(() => {
+        promoScrollRef.current?.scrollTo({
+          animated: false,
+          x: promoSlides.length * promoStep,
+        });
+      });
+      return;
+    }
+
+    if (rawIndex === promoSlides.length + 1) {
+      setPromoIndex(0);
+      requestAnimationFrame(() => {
+        promoScrollRef.current?.scrollTo({ animated: false, x: promoStep });
+      });
+      return;
+    }
+
+    setPromoIndex(Math.min(Math.max(rawIndex - 1, 0), promoSlides.length - 1));
+  };
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Link href="/search" asChild>
-        <Pressable style={styles.searchInput}>
-          <Text style={styles.searchPlaceholder}>Search medicines and products</Text>
-        </Pressable>
-      </Link>
-
-      <View style={styles.banner}>
-        <Text style={styles.bannerTitle}>{featuredOffer?.title ?? 'Upload your prescription'}</Text>
-
-        <Text style={styles.bannerDescription}>
-          {featuredOffer?.description ??
-            'Send your prescription and our pharmacist will review it.'}
-        </Text>
-
-        <Pressable style={styles.bannerButton}>
-          <Text style={styles.bannerButtonText}>{featuredOffer?.badge ?? 'Upload now'}</Text>
-        </Pressable>
-      </View>
-
-      {isLoading ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.stateTitle}>Loading pharmacy data</Text>
-          <Text style={styles.stateText}>Getting categories, offers, and products.</Text>
-        </View>
-      ) : null}
-
-      {errorMessage ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Could not connect</Text>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={loadHomeData}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Categories</Text>
-
-        <Link href="/categories" asChild>
-          <Pressable>
-            <Text style={styles.seeAllText}>See all</Text>
-          </Pressable>
-        </Link>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryRail}
-      >
-        {homeData.categories.map((category) => (
-          <Link
-            key={category.id}
-            href={{
-              pathname: '/products',
-              params: {
-                categoryId: category.id,
-                categoryName: category.name,
-              },
-            }}
-            asChild
+    <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
+        <View style={styles.promoSection}>
+          <ScrollView
+            ref={promoScrollRef}
+            horizontal
+            decelerationRate="fast"
+            snapToInterval={promoStep}
+            snapToAlignment="start"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.promoRail}
+            onMomentumScrollEnd={handlePromoScroll}
           >
-            <Pressable style={styles.categoryRailItem}>
-              <View style={styles.categoryImageWrap}>
-                {resolveImageUrl(category.imageUrl) ? (
-                  <Image
-                    source={{ uri: resolveImageUrl(category.imageUrl) ?? undefined }}
-                    style={styles.categoryImage}
-                  />
-                ) : (
-                  <View style={styles.categoryIcon} />
-                )}
-              </View>
+            {loopedPromoSlides.map((slide) => {
+              const resolvedImageUrl = resolveImageUrl(slide.imageUrl);
 
-              <Text style={styles.categoryText} numberOfLines={2}>
-                {category.name}
-              </Text>
-            </Pressable>
-          </Link>
-        ))}
-      </ScrollView>
+              return (
+                <Pressable
+                  key={slide.loopKey}
+                  style={[styles.promoCard, { height: promoHeight, width: promoWidth }]}
+                  onPress={() => {
+                    if (slide.href === '/request') {
+                      router.push({
+                        pathname: '/request',
+                        params: slide.params,
+                      });
+                      return;
+                    }
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Brands</Text>
+                    router.push('/categories');
+                  }}
+                >
+                  {resolvedImageUrl ? (
+                    <Image
+                      source={{ uri: resolvedImageUrl }}
+                      resizeMode="contain"
+                      style={styles.promoImage}
+                    />
+                  ) : (
+                    <View style={styles.promoFallback}>
+                      <Ionicons name="medical-outline" size={48} color={colors.brand} />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
-        <Link
-          href={{
-            pathname: '/products',
-          }}
-          asChild
-        >
-          <Pressable>
-            <Text style={styles.seeAllText}>See all</Text>
-          </Pressable>
-        </Link>
-      </View>
+          <View style={styles.promoDots}>
+            {promoSlides.map((slide, index) => (
+              <View
+                key={`${slide.title}-dot`}
+                style={index === activePromoIndex ? styles.promoDotActive : styles.promoDot}
+              />
+            ))}
+          </View>
+        </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.brandRail}
-      >
-        {homeData.brands
-          .filter((brand) => brand.isFeatured)
-          .slice(0, 8)
-          .map((brand) => (
+        <View style={styles.actionBand}>
+          <Text style={styles.actionBandTitle}>How can we help?</Text>
+
+          <View style={styles.primaryActionRow}>
+            <Link href="/categories" asChild>
+              <Pressable style={styles.shopAction}>
+                <View style={styles.primaryActionIcon}>
+                  <Ionicons name="bag-outline" size={24} color={colors.white} />
+                </View>
+                <Text style={styles.shopActionTitle}>Shop products</Text>
+              </Pressable>
+            </Link>
+
             <Link
-              key={brand.id}
               href={{
-                pathname: '/products',
+                pathname: '/request',
                 params: {
-                  brandId: brand.id,
-                  brandName: brand.name,
+                  type: 'prescription',
                 },
               }}
               asChild
             >
-              <Pressable style={styles.brandRailItem}>
-                <View style={styles.brandMark}>
-                  <Text style={styles.brandInitial}>{brand.name.slice(0, 1)}</Text>
+              <Pressable style={styles.prescriptionAction}>
+                <View style={styles.secondaryActionIcon}>
+                  <Ionicons name="document-text-outline" size={24} color={colors.brand} />
                 </View>
-                <Text style={styles.brandText} numberOfLines={2}>
-                  {brand.name}
+                <Text style={styles.prescriptionActionTitle}>Upload prescription</Text>
+              </Pressable>
+            </Link>
+          </View>
+
+          <View style={styles.utilityRow}>
+            <Pressable
+              style={styles.utilityChip}
+              onPress={() => Alert.alert('Customer support', 'The support phone number will be added before release.')}
+            >
+              <Ionicons name="call-outline" size={17} color={colors.brand} />
+              <Text style={styles.utilityChipText}>Call support</Text>
+            </Pressable>
+
+            <Link href="/branches" asChild>
+              <Pressable style={styles.utilityChip}>
+                <Ionicons name="business-outline" size={17} color={colors.brand} />
+                <Text style={styles.utilityChipText}>Find branch</Text>
+              </Pressable>
+            </Link>
+          </View>
+        </View>
+
+        {isLoading ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateTitle}>Loading pharmacy data</Text>
+            <Text style={styles.stateText}>Getting categories, offers, and products.</Text>
+          </View>
+        ) : null}
+
+        {errorMessage ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>Could not connect</Text>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+            <Pressable style={styles.retryButton} onPress={loadHomeData}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <SectionHeader title="Categories" href="/categories" />
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryRail}
+        >
+          {homeData.categories.map((category) => (
+            <Link
+              key={category.id}
+              href={{
+                pathname: '/products',
+                params: {
+                  categoryId: category.id,
+                  categoryName: category.name,
+                },
+              }}
+              asChild
+            >
+              <Pressable style={styles.categoryRailItem}>
+                <View style={styles.categoryImageWrap}>
+                  {resolveImageUrl(category.imageUrl) ? (
+                    <Image
+                      source={{ uri: resolveImageUrl(category.imageUrl) ?? undefined }}
+                      resizeMode="contain"
+                      style={styles.categoryImage}
+                    />
+                  ) : (
+                    <View style={styles.categoryIcon} />
+                  )}
+                </View>
+
+                <Text style={styles.categoryText} numberOfLines={2}>
+                  {category.name}
                 </Text>
               </Pressable>
             </Link>
           ))}
-      </ScrollView>
+        </ScrollView>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Popular products</Text>
+        <SectionHeader title="Brands" href="/products" />
 
-        <Pressable>
-          <Link href="/products" asChild>
-            <Text style={styles.seeAllText}>See all</Text>
-          </Link>
-        </Pressable>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.brandRail}
+        >
+          {homeData.brands
+            .filter((brand) => brand.isFeatured)
+            .slice(0, 8)
+            .map((brand) => (
+              <Link
+                key={brand.id}
+                href={{
+                  pathname: '/products',
+                  params: {
+                    brandId: brand.id,
+                    brandName: brand.name,
+                  },
+                }}
+                asChild
+              >
+                <Pressable style={styles.brandRailItem}>
+                  <View style={styles.brandMark}>
+                    <Text style={styles.brandInitial}>{brand.name.slice(0, 1)}</Text>
+                  </View>
+                  <Text style={styles.brandText} numberOfLines={2}>
+                    {brand.name}
+                  </Text>
+                </Pressable>
+              </Link>
+            ))}
+        </ScrollView>
+
+        <SectionHeader title="Popular products" href="/products" />
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.productRail}
+        >
+          {popularProducts.map((product) => (
+            <ProductCard key={product.id} product={product} variant="rail" />
+          ))}
+        </ScrollView>
       </View>
-
-      {popularProducts.map((product) => (
-        <View key={product.id} style={styles.productCard}>
-          <Link
-            href={{
-              pathname: '/products/[id]',
-              params: {
-                id: product.id,
-              },
-            }}
-            asChild
-          >
-            <Pressable style={styles.productLink}>
-              <View style={styles.productImage}>
-                {resolveImageUrl(product.imageUrl) ? (
-                  <Image
-                    source={{ uri: resolveImageUrl(product.imageUrl) ?? undefined }}
-                    style={styles.productPhoto}
-                  />
-                ) : (
-                  <Text style={styles.productImageText}>Product</Text>
-                )}
-              </View>
-
-              <View style={styles.productDetails}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productDescription}>{product.packageSize}</Text>
-                <Text style={styles.productPrice}>{product.price.formatted}</Text>
-              </View>
-            </Pressable>
-          </Link>
-
-          {getProductQuantity(product.id) > 0 ? (
-            <QuantityControl
-              quantity={getProductQuantity(product.id)}
-              onIncrement={() => addProduct(product)}
-              onDecrement={() => decrementProduct(product.id)}
-            />
-          ) : (
-            <Pressable style={styles.addButton} onPress={() => addProduct(product)}>
-              <Text style={styles.addButtonText}>+</Text>
-            </Pressable>
-          )}
-        </View>
-      ))}
     </ScrollView>
+  );
+}
+
+type SectionHeaderProps = {
+  href: '/categories' | '/products';
+  title: string;
+};
+
+function SectionHeader({ href, title }: SectionHeaderProps) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+
+      <Link href={href} asChild>
+        <Pressable>
+          <Text style={styles.seeAllText}>See all</Text>
+        </Pressable>
+      </Link>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F7F8FA',
+    backgroundColor: colors.page,
   },
   content: {
-    paddingTop: 20,
-    paddingHorizontal: 20,
+    paddingTop: 18,
     paddingBottom: 32,
   },
-  searchInput: {
-    justifyContent: 'center',
-    height: 52,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    borderWidth: 1,
-    fontSize: 15,
-    paddingHorizontal: 16,
+  promoSection: {
     marginBottom: 20,
   },
-  searchPlaceholder: {
-    color: '#8A8A8A',
+  promoRail: {
+    gap: promoGap,
+    paddingHorizontal: promoSideInset,
+  },
+  promoCard: {
+    backgroundColor: colors.white,
+    borderColor: '#CFF2F1',
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  promoImage: {
+    height: '100%',
+    width: '100%',
+  },
+  promoFallback: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  promoDots: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(17,24,39,0.18)',
+    borderRadius: 999,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: -20,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+  },
+  promoDot: {
+    backgroundColor: 'rgba(255,255,255,0.58)',
+    borderRadius: 4,
+    height: 5,
+    marginHorizontal: 2.5,
+    width: 5,
+  },
+  promoDotActive: {
+    backgroundColor: colors.white,
+    borderRadius: 4,
+    height: 5,
+    marginHorizontal: 2.5,
+    width: 18,
+  },
+  actionBand: {
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginHorizontal: 20,
+    marginBottom: 22,
+    padding: 14,
+  },
+  actionBandTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  primaryActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  shopAction: {
+    backgroundColor: colors.brand,
+    borderRadius: 14,
+    flex: 1,
+    minHeight: 96,
+    padding: 14,
+  },
+  prescriptionAction: {
+    backgroundColor: colors.brandSoft,
+    borderColor: '#BCEDEA',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 96,
+    padding: 14,
+  },
+  primaryActionIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 12,
+    height: 38,
+    justifyContent: 'center',
+    marginBottom: 12,
+    width: 38,
+  },
+  secondaryActionIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    height: 38,
+    justifyContent: 'center',
+    marginBottom: 12,
+    width: 38,
+  },
+  shopActionTitle: {
+    color: colors.white,
     fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 20,
   },
-  banner: {
-    backgroundColor: '#087F5B',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 28,
+  prescriptionActionTitle: {
+    color: colors.brandDark,
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 20,
   },
-  bannerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 8,
+  utilityRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  bannerDescription: {
-    color: '#D8F3E8',
-    fontSize: 14,
-    lineHeight: 21,
-    marginBottom: 18,
+  utilityChip: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    height: 44,
+    justifyContent: 'center',
   },
-  bannerButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-  },
-  bannerButtonText: {
-    color: '#087F5B',
-    fontWeight: '700',
+  utilityChipText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '800',
+    marginLeft: 6,
   },
   stateBox: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#D8F3E8',
+    borderColor: '#CFF2F1',
     borderRadius: 14,
     borderWidth: 1,
+    marginHorizontal: 20,
     marginBottom: 20,
     padding: 16,
   },
@@ -343,6 +603,7 @@ const styles = StyleSheet.create({
     borderColor: '#FFD4D4',
     borderRadius: 14,
     borderWidth: 1,
+    marginHorizontal: 20,
     marginBottom: 20,
     padding: 16,
   },
@@ -369,14 +630,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
   sectionTitle: {
-    color: '#111827',
-    fontSize: 19,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  seeAllText: {
+    color: colors.brand,
+    fontSize: 13,
+    fontWeight: '800',
   },
   categoryRail: {
     gap: 14,
-    paddingBottom: 26,
+    paddingBottom: 24,
+    paddingLeft: 20,
     paddingRight: 8,
   },
   categoryRailItem: {
@@ -385,9 +659,9 @@ const styles = StyleSheet.create({
   },
   categoryImageWrap: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderRadius: 20,
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 18,
     borderWidth: 1,
     height: 74,
     justifyContent: 'center',
@@ -396,25 +670,26 @@ const styles = StyleSheet.create({
     width: 74,
   },
   categoryIcon: {
-    backgroundColor: '#E7F5EF',
+    backgroundColor: colors.brandSoft,
     borderRadius: 18,
     height: 52,
     width: 52,
   },
   categoryImage: {
-    height: '100%',
-    width: '100%',
+    height: '88%',
+    width: '88%',
   },
   categoryText: {
     color: '#374151',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 16,
     textAlign: 'center',
   },
   brandRail: {
     gap: 12,
-    paddingBottom: 26,
+    paddingBottom: 24,
+    paddingLeft: 20,
     paddingRight: 8,
   },
   brandRailItem: {
@@ -423,9 +698,9 @@ const styles = StyleSheet.create({
   },
   brandMark: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderRadius: 16,
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 14,
     borderWidth: 1,
     height: 58,
     justifyContent: 'center',
@@ -433,88 +708,21 @@ const styles = StyleSheet.create({
     width: 94,
   },
   brandInitial: {
-    color: '#087F5B',
+    color: colors.brand,
     fontSize: 20,
     fontWeight: '800',
   },
   brandText: {
     color: '#374151',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 16,
     textAlign: 'center',
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  seeAllText: {
-    color: '#087F5B',
-    fontWeight: '600',
-  },
-  productCard: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    flexDirection: 'row',
-    marginBottom: 12,
-    padding: 14,
-  },
-  productLink: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-  },
-  productImage: {
-    alignItems: 'center',
-    backgroundColor: '#F0F2F5',
-    borderRadius: 12,
-    height: 76,
-    justifyContent: 'center',
-    width: 76,
-  },
-  productImageText: {
-    color: '#9CA3AF',
-    fontSize: 12,
-  },
-  productPhoto: {
-    borderRadius: 12,
-    height: '100%',
-    width: '100%',
-  },
-  productDetails: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  productName: {
-    color: '#111827',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 5,
-  },
-  productDescription: {
-    color: '#6B7280',
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  productPrice: {
-    color: '#087F5B',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  addButton: {
-    alignItems: 'center',
-    backgroundColor: '#087F5B',
-    borderRadius: 12,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    lineHeight: 26,
+  productRail: {
+    gap: 12,
+    paddingBottom: 4,
+    paddingLeft: 20,
+    paddingRight: 8,
   },
 });

@@ -1,22 +1,31 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Category, getCategories, resolveImageUrl } from '@/lib/api';
 
+const colors = {
+  brand: '#00A9A5',
+  brandSoft: '#E6F8F7',
+  border: '#E5E7EB',
+  page: '#F7F8FA',
+  text: '#111827',
+  muted: '#6B7280',
+  white: '#FFFFFF',
+};
+
 export default function CategoriesScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const placeholderCount = (3 - (categories.length % 3)) % 3;
 
   const loadCategories = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
-      const data = await getCategories();
-      setCategories(data);
+      setCategories(await getCategories());
     } catch {
       setErrorMessage('Unable to load categories. Check that the API is running.');
     } finally {
@@ -34,7 +43,12 @@ export default function CategoriesScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.title}>Categories</Text>
+      <Link href="/search" asChild>
+        <Pressable style={styles.searchBox}>
+          <Ionicons name="search-outline" size={19} color={colors.brand} />
+          <Text style={styles.searchPlaceholder}>Search medicines and products</Text>
+        </Pressable>
+      </Link>
 
       {isLoading ? (
         <View style={styles.stateBox}>
@@ -53,39 +67,46 @@ export default function CategoriesScreen() {
         </View>
       ) : null}
 
+      {!isLoading && !errorMessage && categories.length === 0 ? (
+        <View style={styles.stateBox}>
+          <Text style={styles.stateTitle}>No categories found</Text>
+          <Text style={styles.stateText}>Check back soon for pharmacy departments.</Text>
+        </View>
+      ) : null}
+
       <View style={styles.grid}>
         {categories.map((category) => (
           <Link
             key={category.id}
             href={{
-              pathname: '/categories/products',
+              pathname: '/categories/[id]',
               params: {
-                categoryId: category.id,
                 categoryName: category.name,
+                id: category.id,
               },
             }}
             asChild
           >
-            <Pressable style={styles.card}>
-              {resolveImageUrl(category.imageUrl) ? (
-                <Image
-                  source={{ uri: resolveImageUrl(category.imageUrl) ?? undefined }}
-                  style={styles.image}
-                />
-              ) : (
-                <View style={styles.icon} />
-              )}
-              <Text style={styles.cardTitle}>{category.name}</Text>
+            <Pressable style={styles.categoryCard}>
+              <View style={styles.imageBox}>
+                {resolveImageUrl(category.imageUrl) ? (
+                  <Image
+                    source={{ uri: resolveImageUrl(category.imageUrl) ?? undefined }}
+                    resizeMode="cover"
+                    style={styles.categoryImage}
+                  />
+                ) : (
+                  <View style={styles.fallbackIcon}>
+                    <Ionicons name="medical-outline" size={28} color={colors.brand} />
+                  </View>
+                )}
+              </View>
+
+              <Text style={styles.categoryTitle} numberOfLines={2}>
+                {category.name}
+              </Text>
             </Pressable>
           </Link>
-        ))}
-        {Array.from({ length: placeholderCount }).map((_, index) => (
-          <View
-            key={`category-placeholder-${index}`}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={styles.card}
-          />
         ))}
       </View>
     </ScrollView>
@@ -95,66 +116,83 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F7F8FA',
+    backgroundColor: colors.page,
   },
   content: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingHorizontal: 8,
     paddingBottom: 32,
   },
-  title: {
-    color: '#111827',
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 24,
+  searchBox: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    height: 48,
+    marginBottom: 12,
+    marginHorizontal: 12,
+    paddingHorizontal: 14,
+  },
+  searchPlaceholder: {
+    color: '#8A8A8A',
+    flex: 1,
+    fontSize: 15,
+    marginLeft: 9,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
   },
-  card: {
+  categoryCard: {
     alignItems: 'center',
-    marginBottom: 14,
-    minHeight: 156,
-    width: '32.5%',
+    marginBottom: 16,
+    paddingHorizontal: 6,
+    width: '33.333%',
   },
-  icon: {
-    backgroundColor: '#E7F5EF',
-    borderRadius: 18,
-    height: 92,
-    marginBottom: 11,
-    width: 92,
+  imageBox: {
+    backgroundColor: colors.brandSoft,
+    borderRadius: 9,
+    height: 108,
+    marginBottom: 8,
+    overflow: 'hidden',
+    width: '100%',
   },
-  image: {
-    borderRadius: 14,
-    height: 92,
-    marginBottom: 11,
-    width: 92,
+  categoryImage: {
+    height: '100%',
+    width: '100%',
   },
-  cardTitle: {
-    color: '#111827',
+  fallbackIcon: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  categoryTitle: {
+    color: colors.text,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     lineHeight: 16,
+    minHeight: 32,
     textAlign: 'center',
   },
   stateBox: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#D8F3E8',
+    backgroundColor: colors.white,
+    borderColor: '#CFF2F1',
     borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 20,
+    marginBottom: 14,
+    marginHorizontal: 12,
     padding: 16,
   },
   stateTitle: {
-    color: '#111827',
+    color: colors.text,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 4,
   },
   stateText: {
-    color: '#6B7280',
+    color: colors.muted,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -164,12 +202,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 20,
+    marginHorizontal: 12,
     padding: 16,
   },
   errorTitle: {
     color: '#9F1D1D',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 4,
   },
   errorText: {
@@ -186,7 +225,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: colors.white,
+    fontWeight: '800',
   },
 });

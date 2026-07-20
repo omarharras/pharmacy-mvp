@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
@@ -13,8 +13,10 @@ import {
 import { Product, getProducts, resolveImageUrl } from '@/lib/api';
 
 export default function SearchScreen() {
+  const params = useLocalSearchParams<{ query?: string }>();
+  const initialQuery = typeof params.query === 'string' ? params.query : '';
   const [products, setProducts] = useState<Product[]>([]);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState(initialQuery);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -35,6 +37,10 @@ export default function SearchScreen() {
   useEffect(() => {
     void loadProducts();
   }, [loadProducts]);
+
+  useEffect(() => {
+    setSearchText(initialQuery);
+  }, [initialQuery]);
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -111,6 +117,7 @@ export default function SearchScreen() {
                   {resolveImageUrl(product.imageUrl) ? (
                     <Image
                       source={{ uri: resolveImageUrl(product.imageUrl) ?? undefined }}
+                      resizeMode="contain"
                       style={styles.productPhoto}
                     />
                   ) : (
@@ -182,8 +189,8 @@ const styles = StyleSheet.create({
   },
   productPhoto: {
     borderRadius: 10,
-    height: '100%',
-    width: '100%',
+    height: '88%',
+    width: '88%',
   },
   productName: {
     color: '#111827',
@@ -194,7 +201,7 @@ const styles = StyleSheet.create({
   },
   stateBox: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#D8F3E8',
+    borderColor: '#CFF2F1',
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 20,

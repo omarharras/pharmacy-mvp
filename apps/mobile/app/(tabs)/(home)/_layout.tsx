@@ -1,7 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack } from 'expo-router';
-import { Pressable, Text } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useRequest } from '@/lib/request-context';
+import { HeaderCartButton } from '@/components/header-cart-button';
+
+const logoImage = require('../../../assets/images/elkhabiry-logo.png');
 
 export default function HomeLayout() {
   return (
@@ -9,7 +13,7 @@ export default function HomeLayout() {
       screenOptions={{
         headerBackTitle: 'Back',
         headerShadowVisible: false,
-        headerTintColor: '#087F5B',
+        headerTintColor: '#00A9A5',
         headerTitleStyle: {
           color: '#111827',
           fontWeight: '700',
@@ -19,8 +23,7 @@ export default function HomeLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Home',
-          headerRight: () => <HeaderCartButton />,
+          header: () => <HomeHeader />,
         }}
       />
       <Stack.Screen
@@ -33,29 +36,89 @@ export default function HomeLayout() {
   );
 }
 
-function HeaderCartButton() {
-  const { itemCount } = useRequest();
+function HomeHeader() {
+  const insets = useSafeAreaInsets();
 
   return (
-    <Link href="/request" asChild>
-      <Pressable
-        style={{
-          backgroundColor: '#E7F5EF',
-          borderRadius: 12,
-          marginRight: 16,
-          paddingHorizontal: 14,
-          paddingVertical: 9,
-        }}
-      >
-        <Text
-          style={{
-            color: '#087F5B',
-            fontWeight: '700',
-          }}
-        >
-          {itemCount > 0 ? `Cart ${itemCount}` : 'Cart'}
-        </Text>
-      </Pressable>
-    </Link>
+    <View style={[styles.homeHeader, { paddingTop: insets.top + 10 }]}>
+      <View style={styles.headerTop}>
+        <Image source={logoImage} resizeMode="contain" style={styles.logo} />
+        <View style={styles.cartSlot}>
+          <HeaderCartButton />
+        </View>
+      </View>
+
+      <View style={styles.locationBlock}>
+        <Text style={styles.greeting}>Good morning</Text>
+        <View style={styles.locationRow}>
+          <Ionicons name="location-outline" size={15} color="#CFF2F1" />
+          <Text style={styles.locationText} numberOfLines={1}>
+            Deliver to 1 Al Moatamed
+          </Text>
+        </View>
+      </View>
+      <Link href="/search" asChild>
+        <Pressable style={styles.searchInput}>
+          <Ionicons name="search-outline" size={19} color="#8A8A8A" />
+          <Text style={styles.searchPlaceholder}>Search medicines and products</Text>
+        </Pressable>
+      </Link>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  homeHeader: {
+    backgroundColor: '#00A9A5',
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+  },
+  headerTop: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    minHeight: 58,
+  },
+  cartSlot: {
+    position: 'absolute',
+    right: 0,
+  },
+  logo: {
+    height: 58,
+    width: 178,
+  },
+  locationBlock: {
+    marginBottom: 16,
+    paddingRight: 52,
+  },
+  greeting: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  locationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  locationText: {
+    color: '#CFF2F1',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 4,
+  },
+  searchInput: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    flexDirection: 'row',
+    height: 50,
+    paddingHorizontal: 14,
+  },
+  searchPlaceholder: {
+    color: '#8A8A8A',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+});

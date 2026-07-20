@@ -1,7 +1,7 @@
-import { Link, Stack } from 'expo-router';
-import { Pressable, Text } from 'react-native';
+import { Stack } from 'expo-router';
 
-import { RequestProvider, useRequest } from '@/lib/request-context';
+import { HeaderCartButton } from '@/components/header-cart-button';
+import { RequestProvider } from '@/lib/request-context';
 
 export default function RootLayout() {
   return (
@@ -9,10 +9,13 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerBackTitle: 'Back',
+          headerStyle: {
+            backgroundColor: '#00A9A5',
+          },
           headerShadowVisible: false,
-          headerTintColor: '#087F5B',
+          headerTintColor: '#FFFFFF',
           headerTitleStyle: {
-            color: '#111827',
+            color: '#FFFFFF',
             fontWeight: '700',
           },
         }}
@@ -28,7 +31,49 @@ export default function RootLayout() {
         <Stack.Screen
           name="request"
           options={{
-            title: 'Request summary',
+            title: 'Prescription checkout',
+          }}
+        />
+        <Stack.Screen
+          name="cart"
+          options={{
+            title: 'Cart',
+          }}
+        />
+        <Stack.Screen
+          name="checkout"
+          options={{
+            title: 'Checkout',
+          }}
+        />
+        <Stack.Screen
+          name="address"
+          options={{
+            title: 'Add address',
+          }}
+        />
+        <Stack.Screen
+          name="addresses"
+          options={{
+            title: 'Saved addresses',
+          }}
+        />
+        <Stack.Screen
+          name="branches"
+          options={{
+            title: 'Branches',
+          }}
+        />
+        <Stack.Screen
+          name="signin"
+          options={{
+            title: 'Sign in',
+          }}
+        />
+        <Stack.Screen
+          name="signup"
+          options={{
+            title: 'Create account',
           }}
         />
         <Stack.Screen
@@ -38,33 +83,13 @@ export default function RootLayout() {
             headerRight: () => <HeaderCartButton />,
           }}
         />
+        <Stack.Screen
+          name="orders/[id]"
+          options={{
+            title: 'Order details',
+          }}
+        />
       </Stack>
     </RequestProvider>
-  );
-}
-
-function HeaderCartButton() {
-  const { itemCount } = useRequest();
-
-  return (
-    <Link href="/request" asChild>
-      <Pressable
-        style={{
-          backgroundColor: '#E7F5EF',
-          borderRadius: 12,
-          paddingHorizontal: 14,
-          paddingVertical: 9,
-        }}
-      >
-        <Text
-          style={{
-            color: '#087F5B',
-            fontWeight: '700',
-          }}
-        >
-          {itemCount > 0 ? `Cart ${itemCount}` : 'Cart'}
-        </Text>
-      </Pressable>
-    </Link>
   );
 }

@@ -10,12 +10,15 @@ productsRouter.get('/', async (request, response, next) => {
     const query = typeof request.query.query === 'string' ? request.query.query : undefined;
     const categoryId =
       typeof request.query.categoryId === 'string' ? request.query.categoryId : undefined;
+    const subcategoryId =
+      typeof request.query.subcategoryId === 'string' ? request.query.subcategoryId : undefined;
     const brandId = typeof request.query.brandId === 'string' ? request.query.brandId : undefined;
 
     const products = await prisma.product.findMany({
       where: {
         brandId,
         categoryId,
+        subcategoryId,
         ...(query
           ? {
               OR: [
@@ -43,6 +46,7 @@ productsRouter.get('/', async (request, response, next) => {
       include: {
         brand: true,
         category: true,
+        subcategory: true,
       },
       orderBy: [
         {
@@ -74,6 +78,7 @@ productsRouter.get('/:id', async (request, response, next) => {
       include: {
         brand: true,
         category: true,
+        subcategory: true,
       },
     });
 
