@@ -1,9 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { QuantityControl } from '@/components/quantity-control';
-import { Product, getProduct, resolveImageUrl } from '@/lib/api';
+import { Product, ProductUnit, getProduct, resolveImageUrl } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
 
 export default function ProductDetailScreen() {
@@ -13,6 +14,8 @@ export default function ProductDetailScreen() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   const loadProduct = useCallback(async () => {
     if (!productId) {
@@ -27,6 +30,7 @@ export default function ProductDetailScreen() {
     try {
       const data = await getProduct(productId);
       setProduct(data);
+      setSelectedUnitId(getProductUnits(data)[0]?.id ?? null);
     } catch {
       setErrorMessage('Unable to load this product. Check that the API is running.');
     } finally {
@@ -38,81 +42,209 @@ export default function ProductDetailScreen() {
     void loadProduct();
   }, [loadProduct]);
 
+  const unitOptions = product ? getProductUnits(product) : [];
+  const selectedUnit = unitOptions.find((unit) => unit.id === selectedUnitId) ?? unitOptions[0];
+  const quantity = product && selectedUnit ? getProductQuantity(product.id, selectedUnit.id) : 0;
+
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {isLoading ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.stateTitle}>Loading product</Text>
-          <Text style={styles.stateText}>Getting product details.</Text>
-        </View>
-      ) : null}
-
-      {errorMessage ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Could not connect</Text>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={loadProduct}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {product ? (
-        <>
-          <View style={styles.productImage}>
-            {resolveImageUrl(product.imageUrl) ? (
-              <Image
-                source={{ uri: resolveImageUrl(product.imageUrl) ?? undefined }}
-                resizeMode="contain"
-                style={styles.productPhoto}
-              />
-            ) : (
-              <Text style={styles.productImageText}>Product</Text>
-            )}
+    <View style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {isLoading ? (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateTitle}>Loading product</Text>
+            <Text style={styles.stateText}>Getting product details.</Text>
           </View>
+        ) : null}
 
-          <Text style={styles.categoryText}>{product.category?.name ?? 'Product'}</Text>
-          <Text style={styles.title}>{product.name}</Text>
-          <Text style={styles.packageSize}>{product.packageSize}</Text>
+        {errorMessage ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>Could not connect</Text>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+            <Pressable style={styles.retryButton} onPress={loadProduct}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
-          <View style={styles.summaryRow}>
-            <View>
-              <Text style={styles.summaryLabel}>Price</Text>
-              <Text style={styles.price}>{product.price.formatted}</Text>
+        {product ? (
+          <>
+            <View style={styles.mediaPanel}>
+              {resolveImageUrl(product.imageUrl) ? (
+                <Image
+                  source={{ uri: resolveImageUrl(product.imageUrl) ?? undefined }}
+                  resizeMode="contain"
+                  style={styles.productPhoto}
+                />
+              ) : (
+                <View style={styles.productImageFallback}>
+                  <Ionicons name="medkit-outline" size={42} color="#00A9A5" />
+                </View>
+              )}
             </View>
 
-            <Text style={product.inStock ? styles.stockBadge : styles.outOfStockBadge}>
-              {product.inStock ? 'In stock' : 'Out of stock'}
+            <View style={styles.productHeader}>
+              <Text style={styles.title}>{product.name}</Text>
+
+              <View style={styles.priceRow}>
+                <Text style={styles.price}>
+                  {selectedUnit?.price.formatted ?? product.price.formatted}
+                </Text>
+                <View style={product.inStock ? styles.stockPill : styles.outOfStockPill}>
+                  <Ionicons
+                    name={product.inStock ? 'checkmark-circle' : 'close-circle'}
+                    size={15}
+                    color={product.inStock ? '#007F7B' : '#9F1D1D'}
+                  />
+                  <Text style={product.inStock ? styles.stockPillText : styles.outOfStockPillText}>
+                    {product.inStock ? 'In stock' : 'Out of stock'}
+                  </Text>
+                </View>
+              </View>
+
+              {unitOptions.length > 1 ? (
+                <View style={styles.unitSelector}>
+                  <Text style={styles.unitSelectorLabel}>Choose unit</Text>
+                  <View style={styles.unitOptionRow}>
+                    {unitOptions.map((unit) => {
+                      const active = selectedUnit?.id === unit.id;
+
+                      return (
+                        <Pressable
+                          key={unit.id}
+                          style={active ? styles.unitOptionActive : styles.unitOption}
+                          onPress={() => setSelectedUnitId(unit.id)}
+                        >
+                          <Text style={active ? styles.unitOptionTextActive : styles.unitOptionText}>
+                            {unit.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.specCard}>
+              <Text style={styles.sectionTitle}>Description</Text>
+              {product.brand?.name ? <SpecRow label="Brand" value={product.brand.name} /> : null}
+              <SpecRow label="Unit" value={selectedUnit?.label ?? product.unitLabel ?? 'Product'} />
+              <SpecRow label="Size/Volume" value={product.packageSize} />
+              <View style={styles.productDetailsBlock}>
+                <Text style={styles.productDetailsTitle}>Product Details</Text>
+                <Text style={styles.description} numberOfLines={2}>
+                  {product.description}
+                </Text>
+              </View>
+              <Pressable style={styles.moreDetailsButton} onPress={() => setShowDetails(true)}>
+                <Text style={styles.moreDetailsText}>SEE MORE DETAILS</Text>
+              </Pressable>
+            </View>
+
+            <Modal
+              animationType="fade"
+              transparent
+              visible={showDetails}
+              onRequestClose={() => setShowDetails(false)}
+            >
+              <Pressable style={styles.modalBackdrop} onPress={() => setShowDetails(false)}>
+                <Pressable style={styles.detailsModal}>
+                  <View style={styles.detailsModalHeader}>
+                    <Text style={styles.detailsModalTitle}>Product Details</Text>
+                    <Pressable onPress={() => setShowDetails(false)}>
+                      <Ionicons name="close" size={22} color="#111827" />
+                    </Pressable>
+                  </View>
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <Text style={styles.detailsModalName}>{product.name}</Text>
+                    {product.brand?.name ? (
+                      <Text style={styles.detailsModalMeta}>{product.brand.name}</Text>
+                    ) : null}
+                    <Text style={styles.detailsModalDescription}>{product.description}</Text>
+                    <View style={styles.detailsModalRows}>
+                      {product.brand?.name ? <SpecRow label="Brand" value={product.brand.name} /> : null}
+                      <SpecRow label="Unit" value={selectedUnit?.label ?? product.unitLabel ?? 'Product'} />
+                      <SpecRow label="Size/Volume" value={product.packageSize} />
+                      <SpecRow label="Category" value={product.category?.name ?? 'Product'} />
+                      {product.subcategory?.name ? (
+                        <SpecRow label="Department" value={product.subcategory.name} />
+                      ) : null}
+                    </View>
+                  </ScrollView>
+                </Pressable>
+              </Pressable>
+            </Modal>
+          </>
+        ) : null}
+      </ScrollView>
+
+      {product ? (
+        <View style={styles.actionBar}>
+          <View>
+            <Text style={styles.actionLabel}>Total item price</Text>
+            <Text style={styles.actionPrice}>
+              {selectedUnit?.price.formatted ?? product.price.formatted}
             </Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Details</Text>
-            <Text style={styles.description}>{product.description}</Text>
-          </View>
-
-          {getProductQuantity(product.id) > 0 ? (
-            <View style={styles.detailQuantityRow}>
-              <Text style={styles.detailQuantityLabel}>Quantity in cart</Text>
-              <QuantityControl
-                quantity={getProductQuantity(product.id)}
-                onIncrement={() => addProduct(product)}
-                onDecrement={() => decrementProduct(product.id)}
-              />
-            </View>
+          {quantity > 0 ? (
+            <QuantityControl
+              size="large"
+              quantity={quantity}
+              onIncrement={() => addProduct(product, selectedUnit)}
+              onDecrement={() => decrementProduct(product.id, selectedUnit?.id)}
+            />
           ) : (
-            <Pressable style={styles.addButton} onPress={() => addProduct(product)}>
-              <Text style={styles.addButtonText}>Add to cart</Text>
+            <Pressable
+              style={product.inStock ? styles.addButton : styles.disabledButton}
+              disabled={!product.inStock}
+              onPress={() => addProduct(product, selectedUnit)}
+            >
+              <Ionicons name="cart-outline" size={19} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>
+                {product.inStock ? 'Add to cart' : 'Unavailable'}
+              </Text>
             </Pressable>
           )}
-        </>
+        </View>
       ) : null}
-    </ScrollView>
+    </View>
   );
+}
+
+function SpecRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.specRow}>
+      <Text style={styles.specLabel}>{label}</Text>
+      <Text style={styles.specValue}>{value}</Text>
+    </View>
+  );
+}
+
+function getProductUnits(product: Product): ProductUnit[] {
+  if (product.units.length > 0) {
+    return product.units.slice().sort((left, right) => left.sortOrder - right.sortOrder);
+  }
+
+  return [
+    {
+      id: product.id,
+      isDefault: true,
+      label: product.unitLabel ?? 'Product',
+      price: product.price,
+      pricePiasters: product.pricePiasters,
+      sortOrder: 1,
+    },
+  ];
 }
 
 const styles = StyleSheet.create({
@@ -121,89 +253,136 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F8FA',
   },
   content: {
-    paddingTop: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingTop: 0,
+    paddingHorizontal: 0,
+    paddingBottom: 22,
   },
-  productImage: {
+  mediaPanel: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderRadius: 20,
-    borderWidth: 1,
-    height: 220,
+    height: 318,
     justifyContent: 'center',
-    marginBottom: 24,
-  },
-  productImageText: {
-    color: '#9CA3AF',
-    fontSize: 14,
-    fontWeight: '700',
+    overflow: 'hidden',
   },
   productPhoto: {
-    borderRadius: 20,
-    height: '88%',
-    width: '88%',
+    height: '86%',
+    width: '86%',
   },
-  categoryText: {
-    color: '#00A9A5',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 8,
+  productImageFallback: {
+    alignItems: 'center',
+    backgroundColor: '#E6F8F7',
+    borderRadius: 32,
+    height: 112,
+    justifyContent: 'center',
+    width: 112,
+  },
+  productHeader: {
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#E5E7EB',
+    borderTopWidth: 1,
+    marginBottom: 12,
+    paddingBottom: 18,
+    paddingHorizontal: 20,
+    paddingTop: 18,
   },
   title: {
     color: '#111827',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
-    marginBottom: 8,
+    lineHeight: 30,
+    marginBottom: 14,
   },
-  packageSize: {
-    color: '#6B7280',
-    fontSize: 15,
-    marginBottom: 22,
-  },
-  summaryRow: {
+  priceRow: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderRadius: 16,
-    borderWidth: 1,
     flexDirection: 'row',
+    gap: 10,
     justifyContent: 'space-between',
-    marginBottom: 22,
-    padding: 16,
-  },
-  summaryLabel: {
-    color: '#6B7280',
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 14,
   },
   price: {
     color: '#00A9A5',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
   },
-  stockBadge: {
+  stockPill: {
+    alignItems: 'center',
     backgroundColor: '#E6F8F7',
+    borderColor: '#BCEDEA',
     borderRadius: 999,
-    color: '#00A9A5',
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  unitSelector: {
+    backgroundColor: '#F7F8FA',
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+  },
+  unitSelectorLabel: {
+    color: '#6B7280',
     fontSize: 12,
     fontWeight: '800',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    marginBottom: 9,
+    textTransform: 'uppercase',
   },
-  outOfStockBadge: {
+  unitOptionRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  unitOption: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+  },
+  unitOptionActive: {
+    alignItems: 'center',
+    backgroundColor: '#E6F8F7',
+    borderColor: '#00A9A5',
+    borderRadius: 10,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+  },
+  unitOptionText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  unitOptionTextActive: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  outOfStockPill: {
+    alignItems: 'center',
     backgroundColor: '#FFF5F5',
+    borderColor: '#FFD4D4',
     borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  stockPillText: {
+    color: '#007F7B',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  outOfStockPillText: {
     color: '#9F1D1D',
     fontSize: 12,
     fontWeight: '800',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  section: {
-    marginBottom: 24,
   },
   sectionTitle: {
     color: '#111827',
@@ -213,34 +392,150 @@ const styles = StyleSheet.create({
   },
   description: {
     color: '#4B5563',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  specCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginHorizontal: 20,
+    padding: 16,
+  },
+  specRow: {
+    alignItems: 'center',
+    borderBottomColor: '#EEF0F2',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 11,
+  },
+  productDetailsBlock: {
+    paddingTop: 14,
+  },
+  moreDetailsButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 16,
+  },
+  productDetailsTitle: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 7,
+  },
+  moreDetailsText: {
+    color: '#00A9A5',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  specLabel: {
+    color: '#6B7280',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  specValue: {
+    color: '#111827',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'right',
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  detailsModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    maxHeight: '76%',
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+  },
+  detailsModalHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  detailsModalTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  detailsModalName: {
+    color: '#111827',
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 26,
+    marginBottom: 6,
+  },
+  detailsModalMeta: {
+    color: '#00A9A5',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  detailsModalDescription: {
+    color: '#4B5563',
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 23,
+    marginBottom: 16,
+  },
+  detailsModalRows: {
+    borderTopColor: '#EEF0F2',
+    borderTopWidth: 1,
+  },
+  actionBar: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#E5E7EB',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 18,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  actionLabel: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  actionPrice: {
+    color: '#111827',
+    fontSize: 20,
+    fontWeight: '800',
   },
   addButton: {
     alignItems: 'center',
     backgroundColor: '#00A9A5',
     borderRadius: 14,
+    flexDirection: 'row',
+    gap: 8,
     height: 54,
     justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  disabledButton: {
+    alignItems: 'center',
+    backgroundColor: '#9CA3AF',
+    borderRadius: 14,
+    flexDirection: 'row',
+    gap: 8,
+    height: 54,
+    justifyContent: 'center',
+    paddingHorizontal: 22,
   },
   addButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
-  },
-  detailQuantityRow: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 14,
-  },
-  detailQuantityLabel: {
-    color: '#111827',
-    fontSize: 15,
     fontWeight: '800',
   },
   stateBox: {

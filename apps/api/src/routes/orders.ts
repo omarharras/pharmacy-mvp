@@ -15,6 +15,7 @@ const createOrderSchema = z
       .array(
         z.object({
           productId: z.string().min(1),
+          productUnitId: z.string().min(1).optional(),
           quantity: z.number().int().positive(),
         }),
       )
@@ -55,7 +56,12 @@ ordersRouter.get('/', async (_request, response, next) => {
       include: {
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                units: true,
+              },
+            },
+            productUnit: true,
           },
         },
         prescriptions: true,
@@ -80,7 +86,12 @@ ordersRouter.get('/:id', async (request, response, next) => {
       include: {
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                units: true,
+              },
+            },
+            productUnit: true,
           },
         },
         prescriptions: true,
@@ -112,7 +123,7 @@ ordersRouter.post('/', async (request, response, next) => {
       return;
     }
 
-    const productIds = parsed.data.items.map((item) => item.productId);
+    const productIds = [...new Set(parsed.data.items.map((item) => item.productId))];
     const products = await prisma.product.findMany({
       where: {
         id: {
@@ -129,6 +140,45 @@ ordersRouter.post('/', async (request, response, next) => {
     }
 
     const productById = new Map(products.map((product) => [product.id, product]));
+    const productUnitIds = parsed.data.items
+      .map((item) => item.productUnitId)
+      .filter((productUnitId): productUnitId is string => Boolean(productUnitId));
+    const selectedUnits = productUnitIds.length
+      ? await prisma.productUnit.findMany({
+          where: {
+            id: {
+              in: productUnitIds,
+            },
+          },
+        })
+      : [];
+    const defaultUnits = await prisma.productUnit.findMany({
+      where: {
+        productId: {
+          in: productIds,
+        },
+        isDefault: true,
+      },
+    });
+    const unitById = new Map(selectedUnits.map((unit) => [unit.id, unit]));
+    const defaultUnitByProductId = new Map(defaultUnits.map((unit) => [unit.productId, unit]));
+
+    const hasInvalidUnit = parsed.data.items.some((item) => {
+      if (!item.productUnitId) {
+        return false;
+      }
+
+      const unit = unitById.get(item.productUnitId);
+
+      return !unit || unit.productId !== item.productId;
+    });
+
+    if (hasInvalidUnit) {
+      response.status(400).json({
+        error: 'One or more product units were not found',
+      });
+      return;
+    }
 
     const order = await prisma.order.create({
       data: {
@@ -148,6 +198,9 @@ ordersRouter.post('/', async (request, response, next) => {
         items: {
           create: parsed.data.items.map((item) => {
             const product = productById.get(item.productId);
+            const productUnit = item.productUnitId
+              ? unitById.get(item.productUnitId)
+              : defaultUnitByProductId.get(item.productId);
 
             if (!product) {
               throw new Error(`Product ${item.productId} disappeared during order creation`);
@@ -155,8 +208,10 @@ ordersRouter.post('/', async (request, response, next) => {
 
             return {
               productId: item.productId,
+              productUnitId: productUnit?.id ?? null,
               quantity: item.quantity,
-              pricePiasters: product.pricePiasters,
+              pricePiasters: productUnit?.pricePiasters ?? product.pricePiasters,
+              unitLabel: productUnit?.label ?? null,
             };
           }),
         },
@@ -167,7 +222,12 @@ ordersRouter.post('/', async (request, response, next) => {
       include: {
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                units: true,
+              },
+            },
+            productUnit: true,
           },
         },
         prescriptions: true,

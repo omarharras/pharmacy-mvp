@@ -3,6 +3,8 @@ import { Link, useRouter } from 'expo-router';
 import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useSession } from '@/lib/session-context';
+
 const colors = {
   brand: '#00A9A5',
   brandDark: '#007F7B',
@@ -16,6 +18,7 @@ const colors = {
 
 export default function MoreScreen() {
   const router = useRouter();
+  const { customer, isLoggedIn, signOut } = useSession();
 
   return (
     <ScrollView
@@ -28,22 +31,37 @@ export default function MoreScreen() {
           <Ionicons name="person-outline" size={25} color={colors.brand} />
         </View>
         <View style={styles.profileTextBlock}>
-          <Text style={styles.profileName}>Guest customer</Text>
-          <Text style={styles.profileMeta}>Sign in later to save addresses and orders</Text>
+          <Text style={styles.profileName}>{customer?.fullName ?? 'Guest customer'}</Text>
+          <Text style={styles.profileMeta}>
+            {isLoggedIn
+              ? 'Manage your saved details and pharmacy orders'
+              : 'Sign in to save addresses and view your order history'}
+          </Text>
         </View>
-        <Pressable style={styles.signInButton} onPress={() => router.push('/signin')}>
-          <Text style={styles.signInText}>Sign in</Text>
-        </Pressable>
+        {isLoggedIn ? (
+          <Pressable style={styles.signInButton}>
+            <Text style={styles.signInText}>Edit</Text>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.signInButton} onPress={() => router.push('/signin')}>
+            <Text style={styles.signInText}>Sign in</Text>
+          </Pressable>
+        )}
       </View>
 
-      <MenuSection title="Account">
-        <Link href="/addresses" asChild>
-          <MenuRow icon="location-outline" label="Saved addresses" />
-        </Link>
-        <Link href="/(tabs)/orders" asChild>
-          <MenuRow icon="receipt-outline" label="Order history" />
-        </Link>
-        <MenuRow icon="notifications-outline" label="Notifications" />
+      {isLoggedIn ? (
+        <MenuSection title="Account">
+          <Link href="/addresses" asChild>
+            <MenuRow icon="location-outline" label="Saved addresses" />
+          </Link>
+          <Link href="/(tabs)/orders" asChild>
+            <MenuRow icon="receipt-outline" label="Order history" />
+          </Link>
+          <MenuRow icon="notifications-outline" label="Notifications" />
+        </MenuSection>
+      ) : null}
+
+      <MenuSection title="Preferences">
         <MenuRow icon="language-outline" label="Language" value="English" />
       </MenuSection>
 
@@ -56,10 +74,29 @@ export default function MoreScreen() {
       </MenuSection>
 
       <MenuSection title="Help">
-        <MenuRow icon="chatbubble-ellipses-outline" label="Customer support" />
-        <MenuRow icon="shield-checkmark-outline" label="Privacy policy" />
-        <MenuRow icon="information-circle-outline" label="About El Khairy Pharmacy" />
+        <MenuRow
+          icon="chatbubble-ellipses-outline"
+          label="Customer support"
+          onPress={() => router.push('/support')}
+        />
+        <MenuRow
+          icon="shield-checkmark-outline"
+          label="Privacy policy"
+          onPress={() => router.push('/privacy')}
+        />
+        <MenuRow
+          icon="information-circle-outline"
+          label="About El Khabiry Pharmacy"
+          onPress={() => router.push('/about')}
+        />
       </MenuSection>
+
+      {isLoggedIn ? (
+        <Pressable style={styles.signOutButton} onPress={signOut}>
+          <Ionicons name="log-out-outline" size={19} color="#9F1D1D" />
+          <Text style={styles.signOutText}>Sign out</Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
@@ -199,5 +236,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     marginRight: 8,
+  },
+  signOutButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFF5F5',
+    borderColor: '#FFD4D4',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    height: 52,
+    justifyContent: 'center',
+  },
+  signOutText: {
+    color: '#9F1D1D',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

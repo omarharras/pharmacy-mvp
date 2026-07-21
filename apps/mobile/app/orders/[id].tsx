@@ -129,7 +129,9 @@ export default function OrderDetailsScreen() {
                   </View>
                   <View style={styles.itemText}>
                     <Text style={styles.itemName} numberOfLines={2}>{item.product.name}</Text>
-                    <Text style={styles.itemQty}>Qty {item.quantity}</Text>
+                    <Text style={styles.itemQty}>
+                      {[item.unitLabel, `Qty ${item.quantity}`].filter(Boolean).join(' / ')}
+                    </Text>
                   </View>
                   <Text style={styles.itemPrice}>{formatPiasters(item.pricePiasters)}</Text>
                 </View>

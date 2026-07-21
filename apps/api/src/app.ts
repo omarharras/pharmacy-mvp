@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 
+import { authRouter } from './routes/auth';
 import { brandsRouter } from './routes/brands';
 import { addressesRouter } from './routes/addresses';
 import { branchesRouter } from './routes/branches';
@@ -19,6 +20,7 @@ app.use('/images', express.static('public/images'));
 app.use('/uploads', express.static('uploads'));
 
 app.use('/health', healthRouter);
+app.use('/auth', authRouter);
 app.use('/addresses', addressesRouter);
 app.use('/brands', brandsRouter);
 app.use('/branches', branchesRouter);

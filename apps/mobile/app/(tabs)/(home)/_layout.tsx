@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link, Stack } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Stack } from 'expo-router';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeaderCartButton } from '@/components/header-cart-button';
+import { HeaderSearchLink } from '@/components/header-search-link';
 
 const logoImage = require('../../../assets/images/elkhabiry-logo.png');
 
@@ -57,12 +58,7 @@ function HomeHeader() {
           </Text>
         </View>
       </View>
-      <Link href="/search" asChild>
-        <Pressable style={styles.searchInput}>
-          <Ionicons name="search-outline" size={19} color="#8A8A8A" />
-          <Text style={styles.searchPlaceholder}>Search medicines and products</Text>
-        </Pressable>
-      </Link>
+      <HeaderSearchLink />
     </View>
   );
 }
@@ -107,18 +103,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginLeft: 4,
-  },
-  searchInput: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    flexDirection: 'row',
-    height: 50,
-    paddingHorizontal: 14,
-  },
-  searchPlaceholder: {
-    color: '#8A8A8A',
-    fontSize: 14,
-    marginLeft: 8,
   },
 });

@@ -349,7 +349,7 @@ export default function HomeScreen() {
                   {resolveImageUrl(category.imageUrl) ? (
                     <Image
                       source={{ uri: resolveImageUrl(category.imageUrl) ?? undefined }}
-                      resizeMode="contain"
+                      resizeMode="cover"
                       style={styles.categoryImage}
                     />
                   ) : (
@@ -676,8 +676,8 @@ const styles = StyleSheet.create({
     width: 52,
   },
   categoryImage: {
-    height: '88%',
-    width: '88%',
+    height: '100%',
+    width: '100%',
   },
   categoryText: {
     color: '#374151',

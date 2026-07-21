@@ -6,6 +6,19 @@ type ApiResponse<T> = {
   data: T;
 };
 
+export type Customer = {
+  id: string;
+  fullName: string;
+  phone: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AuthSession = {
+  customer: Customer;
+  token: string;
+};
+
 export type Category = {
   id: string;
   name: string;
@@ -52,6 +65,7 @@ export type Product = {
   slug: string;
   description: string;
   packageSize: string;
+  unitLabel?: string;
   pricePiasters: number;
   imageUrl: string | null;
   inStock: boolean;
@@ -61,9 +75,23 @@ export type Product = {
     currency: string;
     formatted: string;
   };
+  units: ProductUnit[];
   category?: Category;
   subcategory?: Subcategory | null;
   brand?: Brand | null;
+};
+
+export type ProductUnit = {
+  id: string;
+  label: string;
+  pricePiasters: number;
+  isDefault: boolean;
+  sortOrder: number;
+  price: {
+    amount: number;
+    currency: string;
+    formatted: string;
+  };
 };
 
 export type PrescriptionUpload = {
@@ -139,9 +167,12 @@ export type Order = {
   items: {
     id: string;
     productId: string;
+    productUnitId: string | null;
+    unitLabel: string | null;
     quantity: number;
     pricePiasters: number;
     product: Product;
+    productUnit: ProductUnit | null;
   }[];
   prescriptions: PrescriptionUpload[];
   createdAt: string;
@@ -157,6 +188,7 @@ type CreateOrderInput = {
   };
   items: {
     productId: string;
+    productUnitId?: string;
     quantity: number;
   }[];
   prescriptionUploadIds: string[];
@@ -202,14 +234,24 @@ async function postJson<T>(path: string, body: unknown) {
   return sendJson<T>(path, body, 'POST');
 }
 
+async function postAuthorizedJson<T>(path: string, body: unknown, token: string) {
+  return sendJson<T>(path, body, 'POST', token);
+}
+
 async function putJson<T>(path: string, body: unknown) {
   return sendJson<T>(path, body, 'PUT');
 }
 
-async function sendJson<T>(path: string, body: unknown, method: 'POST' | 'PUT') {
+async function sendJson<T>(
+  path: string,
+  body: unknown,
+  method: 'POST' | 'PUT',
+  token?: string,
+) {
   const response = await fetch(`${apiUrl}${path}`, {
     method,
     headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
@@ -222,6 +264,18 @@ async function sendJson<T>(path: string, body: unknown, method: 'POST' | 'PUT') 
   const payload = (await response.json()) as ApiResponse<T>;
 
   return payload.data;
+}
+
+export function signIn(input: { password: string; phone: string }) {
+  return postJson<AuthSession>('/auth/signin', input);
+}
+
+export function signUp(input: { fullName: string; password: string; phone: string }) {
+  return postJson<AuthSession>('/auth/signup', input);
+}
+
+export function signOut(token: string) {
+  return postAuthorizedJson<{ signedOut: boolean }>('/auth/signout', {}, token);
 }
 
 export function getCategories() {

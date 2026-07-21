@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 import { createOrder, getAddresses } from '@/lib/api';
+import { OrderSuccessScreen } from '@/components/order-success-screen';
 import { CheckoutAddress, formatPiasters, useRequest } from '@/lib/request-context';
 
 type FulfillmentMethod = 'delivery' | 'pickup';
@@ -160,6 +161,7 @@ export default function CheckoutScreen() {
         customer,
         items: items.map((item) => ({
           productId: item.product.id,
+          productUnitId: item.unit.id,
           quantity: item.quantity,
         })),
         prescriptionUploadIds: [],
@@ -183,24 +185,35 @@ export default function CheckoutScreen() {
     }
   };
 
+  if (submittedOrderId) {
+    const trackSubmittedOrder = () => {
+      router.dismissTo('/(tabs)/orders');
+      requestAnimationFrame(() => {
+        router.push({
+          pathname: '/orders/[id]',
+          params: { id: submittedOrderId },
+        });
+      });
+    };
+
+    return (
+      <OrderSuccessScreen
+        message="Your order was placed successfully. The pharmacy will review it and update the order status."
+        primaryLabel="Track order"
+        secondaryLabel="Continue shopping"
+        title="Order placed"
+        onPrimaryPress={trackSubmittedOrder}
+        onSecondaryPress={() => router.replace('/categories')}
+      />
+    );
+  }
+
   return (
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {submittedOrderId ? (
-        <View style={styles.successBox}>
-          <Text style={styles.successTitle}>Order placed</Text>
-          <Text style={styles.successText}>
-            Reference: {submittedOrderId.slice(-8).toUpperCase()}
-          </Text>
-          <Pressable style={styles.successButton} onPress={() => router.push('/(tabs)/orders')}>
-            <Text style={styles.successButtonText}>View orders</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
       {items.length === 0 ? (
         <View style={styles.emptyBox}>
           <Text style={styles.emptyTitle}>No items to checkout</Text>
@@ -1014,37 +1027,5 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: 'center',
     marginTop: 6,
-  },
-  successBox: {
-    backgroundColor: colors.brandSoft,
-    borderColor: '#BCEDEA',
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 18,
-    padding: 18,
-  },
-  successTitle: {
-    color: colors.brand,
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-  successText: {
-    color: '#17664E',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  successButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: colors.brand,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  successButtonText: {
-    color: colors.white,
-    fontWeight: '800',
   },
 });

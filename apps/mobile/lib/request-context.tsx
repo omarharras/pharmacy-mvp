@@ -1,10 +1,11 @@
 import { ReactNode, createContext, useContext, useMemo, useState } from 'react';
 
-import { Address, PrescriptionUpload, Product } from './api';
+import { Address, PrescriptionUpload, Product, ProductUnit } from './api';
 
 export type RequestItem = {
   product: Product;
   quantity: number;
+  unit: ProductUnit;
 };
 
 export type RequestPrescription = PrescriptionUpload & {
@@ -19,10 +20,11 @@ type RequestContextValue = {
   prescriptions: RequestPrescription[];
   checkoutAddress: CheckoutAddress | null;
   totalPiasters: number;
-  addProduct: (product: Product) => void;
+  addProduct: (product: Product, unit?: ProductUnit) => void;
   addPrescription: (prescription: RequestPrescription) => void;
-  decrementProduct: (productId: string) => void;
-  getProductQuantity: (productId: string) => number;
+  decrementProduct: (productId: string, productUnitId?: string) => void;
+  getProductQuantity: (productId: string, productUnitId?: string) => number;
+  removeProduct: (productId: string, productUnitId?: string) => void;
   removePrescription: (prescriptionId: string) => void;
   setCheckoutAddress: (address: CheckoutAddress) => void;
   clearProducts: () => void;
@@ -44,7 +46,7 @@ export function RequestProvider({ children }: RequestProviderProps) {
   const value = useMemo<RequestContextValue>(() => {
     const itemCount = items.reduce((total, item) => total + item.quantity, 0);
     const totalPiasters = items.reduce(
-      (total, item) => total + item.product.pricePiasters * item.quantity,
+      (total, item) => total + item.unit.pricePiasters * item.quantity,
       0,
     );
 
@@ -54,19 +56,22 @@ export function RequestProvider({ children }: RequestProviderProps) {
       prescriptions,
       checkoutAddress,
       totalPiasters,
-      addProduct: (product) => {
+      addProduct: (product, unit) => {
         setItems((currentItems) => {
-          const existingItem = currentItems.find((item) => item.product.id === product.id);
+          const selectedUnit = unit ?? getDefaultProductUnit(product);
+          const existingItem = currentItems.find(
+            (item) => item.product.id === product.id && item.unit.id === selectedUnit.id,
+          );
 
           if (existingItem) {
             return currentItems.map((item) =>
-              item.product.id === product.id
+              item.product.id === product.id && item.unit.id === selectedUnit.id
                 ? { ...item, quantity: item.quantity + 1 }
                 : item,
             );
           }
 
-          return [...currentItems, { product, quantity: 1 }];
+          return [...currentItems, { product, quantity: 1, unit: selectedUnit }];
         });
       },
       addPrescription: (prescription) => {
@@ -75,19 +80,29 @@ export function RequestProvider({ children }: RequestProviderProps) {
           prescription,
         ]);
       },
-      decrementProduct: (productId) => {
+      decrementProduct: (productId, productUnitId) => {
         setItems((currentItems) =>
           currentItems
             .map((item) =>
-              item.product.id === productId
+              item.product.id === productId && item.unit.id === productUnitId
                 ? { ...item, quantity: item.quantity - 1 }
                 : item,
             )
             .filter((item) => item.quantity > 0),
         );
       },
-      getProductQuantity: (productId) => {
-        return items.find((item) => item.product.id === productId)?.quantity ?? 0;
+      getProductQuantity: (productId, productUnitId) => {
+        return (
+          items.find((item) => item.product.id === productId && item.unit.id === productUnitId)
+            ?.quantity ?? 0
+        );
+      },
+      removeProduct: (productId, productUnitId) => {
+        setItems((currentItems) =>
+          currentItems.filter(
+            (item) => item.product.id !== productId || item.unit.id !== productUnitId,
+          ),
+        );
       },
       removePrescription: (prescriptionId) => {
         setPrescriptions((currentPrescriptions) =>
@@ -119,6 +134,20 @@ export function useRequest() {
   }
 
   return context;
+}
+
+function getDefaultProductUnit(product: Product) {
+  return (
+    product.units.find((unit) => unit.isDefault) ??
+    product.units[0] ?? {
+      id: product.id,
+      isDefault: true,
+      label: product.unitLabel ?? 'Piece',
+      price: product.price,
+      pricePiasters: product.pricePiasters,
+      sortOrder: 1,
+    }
+  );
 }
 
 export function formatPiasters(pricePiasters: number) {

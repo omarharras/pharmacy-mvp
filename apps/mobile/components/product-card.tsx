@@ -23,7 +23,8 @@ const colors = {
 
 export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
   const { addProduct, decrementProduct, getProductQuantity } = useRequest();
-  const quantity = getProductQuantity(product.id);
+  const defaultUnit = product.units.find((unit) => unit.isDefault) ?? product.units[0];
+  const quantity = defaultUnit ? getProductQuantity(product.id, defaultUnit.id) : 0;
 
   return (
     <View style={variant === 'rail' ? styles.railCard : styles.gridCard}>
@@ -56,16 +57,21 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
       </Link>
 
       <View style={styles.priceActionRow}>
-        <Text style={styles.productPrice}>{product.price.formatted}</Text>
+        <Text style={styles.productPrice}>
+          {defaultUnit?.price.formatted ?? product.price.formatted}
+        </Text>
 
-        {quantity > 0 ? (
+        {quantity > 0 && defaultUnit ? (
           <QuantityControl
             quantity={quantity}
-            onIncrement={() => addProduct(product)}
-            onDecrement={() => decrementProduct(product.id)}
+            onIncrement={() => addProduct(product, defaultUnit)}
+            onDecrement={() => decrementProduct(product.id, defaultUnit.id)}
           />
         ) : (
-          <Pressable style={styles.addButton} onPress={() => addProduct(product)}>
+          <Pressable
+            style={styles.addButton}
+            onPress={() => addProduct(product, defaultUnit)}
+          >
             <Ionicons name="add" size={17} color={colors.white} />
           </Pressable>
         )}

@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useSession } from '@/lib/session-context';
+
 const colors = {
   brand: '#00A9A5',
   brandDark: '#007F7B',
@@ -16,19 +18,32 @@ const colors = {
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { signIn } = useSession();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const canSubmit = phone.trim().length >= 8 && password.length >= 6;
 
-  const submit = () => {
+  const submit = async () => {
     if (!canSubmit) {
       Alert.alert('Missing details', 'Enter a valid phone number and password.');
       return;
     }
 
-    Alert.alert('Sign in', 'Account authentication will be connected to the backend later.');
-    router.back();
+    setIsSubmitting(true);
+
+    try {
+      await signIn({
+        password,
+        phone: phone.trim(),
+      });
+      router.replace('/(tabs)/more');
+    } catch {
+      Alert.alert('Sign in failed', 'Check your phone number and password.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -73,8 +88,12 @@ export default function SignInScreen() {
           </View>
         </Field>
 
-        <Pressable style={canSubmit ? styles.primaryButton : styles.disabledButton} onPress={submit}>
-          <Text style={styles.primaryButtonText}>Sign in</Text>
+        <Pressable
+          disabled={isSubmitting}
+          style={canSubmit && !isSubmitting ? styles.primaryButton : styles.disabledButton}
+          onPress={submit}
+        >
+          <Text style={styles.primaryButtonText}>{isSubmitting ? 'Signing in...' : 'Sign in'}</Text>
         </Pressable>
 
         <Pressable style={styles.forgotButton}>

@@ -57,13 +57,6 @@ export default function SubcategoriesScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Link href="/search" asChild>
-          <Pressable style={styles.searchBox}>
-            <Ionicons name="search-outline" size={19} color={colors.brand} />
-            <Text style={styles.searchPlaceholder}>Search medicines and products</Text>
-          </Pressable>
-        </Link>
-
         {isLoading ? (
           <View style={styles.stateBox}>
             <Text style={styles.stateTitle}>Loading subcategories</Text>
@@ -172,24 +165,6 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingHorizontal: 8,
     paddingBottom: 32,
-  },
-  searchBox: {
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderColor: colors.border,
-    borderRadius: 10,
-    borderWidth: 1,
-    flexDirection: 'row',
-    height: 48,
-    marginBottom: 12,
-    marginHorizontal: 12,
-    paddingHorizontal: 14,
-  },
-  searchPlaceholder: {
-    color: '#8A8A8A',
-    flex: 1,
-    fontSize: 15,
-    marginLeft: 9,
   },
   grid: {
     flexDirection: 'row',

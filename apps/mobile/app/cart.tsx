@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -10,72 +11,104 @@ export default function CartScreen() {
   const {
     addProduct,
     decrementProduct,
-    itemCount,
     items,
+    removeProduct,
     totalPiasters,
   } = useRequest();
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.screen}>
       {items.length === 0 ? (
-        <View style={styles.emptyBox}>
+        <ScrollView
+          contentContainerStyle={styles.emptyContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.emptyIcon}>
+            <Ionicons name="cart-outline" size={42} color="#00A9A5" />
+          </View>
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptyText}>Browse categories and add products before checkout.</Text>
+          <Text style={styles.emptyText}>Add medicines and pharmacy products to continue.</Text>
           <Pressable style={styles.primaryButton} onPress={() => router.push('/categories')}>
+            <Ionicons name="bag-outline" size={19} color="#FFFFFF" />
             <Text style={styles.primaryButtonText}>Browse products</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       ) : (
         <>
-          {items.map((item) => (
-            <View key={item.product.id} style={styles.itemCard}>
-              <View style={styles.itemImage}>
-                {resolveImageUrl(item.product.imageUrl) ? (
-                  <Image
-                    source={{ uri: resolveImageUrl(item.product.imageUrl) ?? undefined }}
-                    resizeMode="contain"
-                    style={styles.itemPhoto}
-                  />
-                ) : (
-                  <Text style={styles.itemImageText}>Product</Text>
-                )}
-              </View>
-
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName} numberOfLines={2}>
-                  {item.product.name}
-                </Text>
-                <Text style={styles.itemMeta}>{item.product.packageSize}</Text>
-                <Text style={styles.itemPrice}>{item.product.price.formatted}</Text>
-              </View>
-
-              <QuantityControl
-                quantity={item.quantity}
-                onIncrement={() => addProduct(item.product)}
-                onDecrement={() => decrementProduct(item.product.id)}
-              />
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.itemsHeader}>
+              <Text style={styles.itemsTitle}>Items</Text>
+              <Pressable onPress={() => router.push('/categories')}>
+                <Text style={styles.addMoreText}>Add more</Text>
+              </Pressable>
             </View>
-          ))}
 
-          <View style={styles.totalBar}>
+            {items.map((item) => {
+              return (
+                <View key={`${item.product.id}-${item.unit.id}`} style={styles.itemCard}>
+                  <View style={styles.itemTopRow}>
+                    <View style={styles.itemImage}>
+                      {resolveImageUrl(item.product.imageUrl) ? (
+                        <Image
+                          source={{ uri: resolveImageUrl(item.product.imageUrl) ?? undefined }}
+                          resizeMode="contain"
+                          style={styles.itemPhoto}
+                        />
+                      ) : (
+                        <Text style={styles.itemImageText}>Product</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.itemDetails}>
+                      <View style={styles.itemNameRow}>
+                        <Text style={styles.itemName} numberOfLines={2}>
+                          {item.product.name}
+                        </Text>
+                        <Pressable
+                          accessibilityLabel={`Remove ${item.product.name}`}
+                          hitSlop={8}
+                          style={styles.removeButton}
+                          onPress={() => removeProduct(item.product.id, item.unit.id)}
+                        >
+                          <Ionicons name="trash-outline" size={18} color="#9F1D1D" />
+                        </Pressable>
+                      </View>
+                      <Text style={styles.itemMeta}>
+                        {[item.unit.label, item.product.packageSize].filter(Boolean).join(' / ')}
+                      </Text>
+                      <View style={styles.itemActionRow}>
+                        <Text style={styles.itemUnitPrice}>{item.unit.price.formatted}</Text>
+                        <QuantityControl
+                          quantity={item.quantity}
+                          onIncrement={() => addProduct(item.product, item.unit)}
+                          onDecrement={() => decrementProduct(item.product.id, item.unit.id)}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.checkoutBar}>
             <View>
-              <Text style={styles.totalLabel}>{itemCount} items</Text>
-              <Text style={styles.totalValue}>{formatPiasters(totalPiasters)}</Text>
+              <Text style={styles.checkoutLabel}>Total</Text>
+              <Text style={styles.checkoutValue}>{formatPiasters(totalPiasters)}</Text>
             </View>
-
             <Link href="/checkout" asChild>
               <Pressable style={styles.checkoutButton}>
+                <Ionicons name="card-outline" size={19} color="#FFFFFF" />
                 <Text style={styles.checkoutButtonText}>Checkout</Text>
               </Pressable>
             </Link>
           </View>
         </>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -85,17 +118,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F8FA',
   },
   content: {
-    paddingTop: 24,
+    paddingTop: 18,
     paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingBottom: 18,
   },
-  emptyBox: {
+  emptyContent: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 24,
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 40,
+  },
+  emptyIcon: {
+    alignItems: 'center',
+    backgroundColor: '#E6F8F7',
+    borderRadius: 38,
+    height: 76,
+    justifyContent: 'center',
+    marginBottom: 18,
+    width: 76,
   },
   emptyTitle: {
     color: '#111827',
@@ -108,19 +149,36 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 18,
+    marginBottom: 22,
     textAlign: 'center',
   },
-  itemCard: {
+  itemsHeader: {
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  itemsTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  addMoreText: {
+    color: '#00A9A5',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  itemCard: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E5E7EB',
     borderRadius: 16,
     borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
     marginBottom: 12,
     padding: 12,
+  },
+  itemTopRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
   },
   itemImage: {
     alignItems: 'center',
@@ -141,41 +199,60 @@ const styles = StyleSheet.create({
   },
   itemDetails: {
     flex: 1,
+    marginLeft: 12,
+  },
+  itemNameRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
   },
   itemName: {
     color: '#111827',
+    flex: 1,
     fontSize: 15,
     fontWeight: '800',
     marginBottom: 4,
+  },
+  removeButton: {
+    alignItems: 'center',
+    height: 30,
+    justifyContent: 'center',
+    marginLeft: 8,
+    marginTop: -4,
+    width: 30,
   },
   itemMeta: {
     color: '#6B7280',
     fontSize: 12,
     marginBottom: 6,
   },
-  itemPrice: {
+  itemUnitPrice: {
     color: '#00A9A5',
     fontSize: 14,
     fontWeight: '800',
   },
-  totalBar: {
+  itemActionRow: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#BCEDEA',
-    borderRadius: 16,
-    borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
-    padding: 14,
   },
-  totalLabel: {
+  checkoutBar: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#E5E7EB',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 18,
+  },
+  checkoutLabel: {
     color: '#6B7280',
     fontSize: 12,
     fontWeight: '800',
     marginBottom: 4,
   },
-  totalValue: {
+  checkoutValue: {
     color: '#111827',
     fontSize: 20,
     fontWeight: '800',
@@ -184,6 +261,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#00A9A5',
     borderRadius: 12,
+    flexDirection: 'row',
+    gap: 7,
     height: 46,
     justifyContent: 'center',
     paddingHorizontal: 22,
@@ -197,6 +276,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#00A9A5',
     borderRadius: 14,
+    flexDirection: 'row',
+    gap: 8,
     height: 54,
     justifyContent: 'center',
     marginTop: 8,

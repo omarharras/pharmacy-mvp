@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useSession } from '@/lib/session-context';
+
 const colors = {
   brand: '#00A9A5',
   brandDark: '#007F7B',
@@ -16,24 +18,38 @@ const colors = {
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { signUp } = useSession();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const canSubmit =
     fullName.trim().length >= 2 &&
     phone.trim().length >= 8 &&
     password.length >= 6 &&
     acceptedTerms;
 
-  const submit = () => {
+  const submit = async () => {
     if (!canSubmit) {
       Alert.alert('Missing details', 'Complete your details and accept the terms.');
       return;
     }
 
-    Alert.alert('Create account', 'Account registration will be connected to the backend later.');
-    router.back();
+    setIsSubmitting(true);
+
+    try {
+      await signUp({
+        fullName: fullName.trim(),
+        password,
+        phone: phone.trim(),
+      });
+      router.replace('/(tabs)/more');
+    } catch {
+      Alert.alert('Create account failed', 'This phone may already be registered.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -90,8 +106,14 @@ export default function SignUpScreen() {
           <Text style={styles.termsText}>I accept terms and privacy policy</Text>
         </Pressable>
 
-        <Pressable style={canSubmit ? styles.primaryButton : styles.disabledButton} onPress={submit}>
-          <Text style={styles.primaryButtonText}>Create account</Text>
+        <Pressable
+          disabled={isSubmitting}
+          style={canSubmit && !isSubmitting ? styles.primaryButton : styles.disabledButton}
+          onPress={submit}
+        >
+          <Text style={styles.primaryButtonText}>
+            {isSubmitting ? 'Creating account...' : 'Create account'}
+          </Text>
         </Pressable>
       </View>
 

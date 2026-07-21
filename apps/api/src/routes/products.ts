@@ -5,6 +5,63 @@ import { prisma } from '../lib/prisma';
 
 export const productsRouter = Router();
 
+function getUnitLabel(packageSize: string) {
+  const value = packageSize.toLowerCase();
+
+  if (value.includes('ml') || value.includes('spray') || value.includes('liquid')) {
+    return 'Bottle';
+  }
+
+  if (
+    value.includes('box') ||
+    value.includes('cream') ||
+    /\d+\s*g\b/.test(value) ||
+    value.includes('diaper') ||
+    value.includes('pad')
+  ) {
+    return 'Box';
+  }
+
+  return 'Piece';
+}
+
+function formatProduct<T extends {
+  id: string;
+  packageSize: string;
+  pricePiasters: number;
+  units?: {
+    id: string;
+    isDefault: boolean;
+    label: string;
+    pricePiasters: number;
+    sortOrder: number;
+  }[];
+}>(product: T) {
+  const fallbackUnit = {
+    id: product.id,
+    isDefault: true,
+    label: getUnitLabel(product.packageSize),
+    pricePiasters: product.pricePiasters,
+    sortOrder: 1,
+  };
+  const units = (product.units?.length ? product.units : [fallbackUnit])
+    .slice()
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map((unit) => ({
+      ...unit,
+      price: formatPiasters(unit.pricePiasters),
+    }));
+  const defaultUnit = units.find((unit) => unit.isDefault) ?? units[0];
+
+  return {
+    ...product,
+    pricePiasters: defaultUnit.pricePiasters,
+    unitLabel: defaultUnit.label,
+    units,
+    price: formatPiasters(defaultUnit.pricePiasters),
+  };
+}
+
 productsRouter.get('/', async (request, response, next) => {
   try {
     const query = typeof request.query.query === 'string' ? request.query.query : undefined;
@@ -47,6 +104,7 @@ productsRouter.get('/', async (request, response, next) => {
         brand: true,
         category: true,
         subcategory: true,
+        units: true,
       },
       orderBy: [
         {
@@ -59,10 +117,7 @@ productsRouter.get('/', async (request, response, next) => {
     });
 
     response.json({
-      data: products.map((product) => ({
-        ...product,
-        price: formatPiasters(product.pricePiasters),
-      })),
+      data: products.map((product) => formatProduct(product)),
     });
   } catch (error) {
     next(error);
@@ -79,6 +134,7 @@ productsRouter.get('/:id', async (request, response, next) => {
         brand: true,
         category: true,
         subcategory: true,
+        units: true,
       },
     });
 
@@ -90,10 +146,7 @@ productsRouter.get('/:id', async (request, response, next) => {
     }
 
     response.json({
-      data: {
-        ...product,
-        price: formatPiasters(product.pricePiasters),
-      },
+      data: formatProduct(product),
     });
   } catch (error) {
     next(error);

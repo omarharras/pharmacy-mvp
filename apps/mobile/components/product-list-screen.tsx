@@ -1,5 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Pressable,
@@ -63,13 +62,6 @@ export function ProductListScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Link href="/search" asChild>
-          <Pressable style={styles.searchInput}>
-            <Ionicons name="search-outline" size={19} color="#00A9A5" />
-            <Text style={styles.searchPlaceholder}>Search medicines and products</Text>
-          </Pressable>
-        </Link>
-
       {isLoading ? (
         <View style={styles.stateBox}>
           <Text style={styles.stateTitle}>Loading products</Text>
@@ -113,23 +105,6 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingHorizontal: 14,
     paddingBottom: 32,
-  },
-  searchInput: {
-    alignItems: 'center',
-    height: 52,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  searchPlaceholder: {
-    color: '#8A8A8A',
-    flex: 1,
-    fontSize: 15,
-    marginLeft: 9,
   },
   productGrid: {
     flexDirection: 'row',
