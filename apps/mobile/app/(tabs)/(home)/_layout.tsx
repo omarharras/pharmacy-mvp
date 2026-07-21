@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
+import { Stack, useRouter } from 'expo-router';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeaderCartButton } from '@/components/header-cart-button';
@@ -30,6 +31,7 @@ export default function HomeLayout() {
       <Stack.Screen
         name="products"
         options={{
+          header: (props) => <CatalogHeader {...props} />,
           title: 'Products',
         }}
       />
@@ -58,6 +60,41 @@ function HomeHeader() {
           </Text>
         </View>
       </View>
+      <HeaderSearchLink />
+    </View>
+  );
+}
+
+function CatalogHeader({ back, options, route }: NativeStackHeaderProps) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const title = options.title ?? route.name;
+
+  return (
+    <View style={[styles.catalogHeader, { paddingTop: insets.top + 10 }]}>
+      <View style={styles.catalogHeaderTop}>
+        <View style={styles.catalogLeftSlot}>
+          {back ? (
+            <Pressable
+              accessibilityLabel="Go back"
+              hitSlop={8}
+              style={styles.catalogBackButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <Text style={styles.catalogTitle} numberOfLines={1}>
+          {title}
+        </Text>
+
+        <View style={styles.catalogRightSlot}>
+          <HeaderCartButton />
+        </View>
+      </View>
+
       <HeaderSearchLink />
     </View>
   );
@@ -103,5 +140,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginLeft: 4,
+  },
+  catalogHeader: {
+    backgroundColor: '#00A9A5',
+    paddingBottom: 14,
+    paddingHorizontal: 20,
+  },
+  catalogHeaderTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 12,
+    minHeight: 52,
+  },
+  catalogLeftSlot: {
+    alignItems: 'flex-start',
+    width: 52,
+  },
+  catalogRightSlot: {
+    alignItems: 'flex-end',
+    width: 52,
+  },
+  catalogBackButton: {
+    alignItems: 'center',
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  catalogTitle: {
+    color: '#FFFFFF',
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 });

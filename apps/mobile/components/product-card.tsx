@@ -15,7 +15,6 @@ type ProductCardProps = {
 const colors = {
   brand: '#00A9A5',
   border: '#E5E7EB',
-  image: '#F0F2F5',
   muted: '#9CA3AF',
   text: '#111827',
   white: '#FFFFFF',
@@ -105,7 +104,7 @@ const styles = StyleSheet.create({
   },
   productImage: {
     alignItems: 'center',
-    backgroundColor: colors.image,
+    backgroundColor: colors.white,
     borderRadius: 12,
     height: 96,
     justifyContent: 'center',
@@ -118,8 +117,8 @@ const styles = StyleSheet.create({
   },
   productPhoto: {
     borderRadius: 12,
-    height: '88%',
-    width: '88%',
+    height: '100%',
+    width: '100%',
   },
   productName: {
     color: colors.text,
