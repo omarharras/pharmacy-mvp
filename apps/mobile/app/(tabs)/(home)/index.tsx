@@ -524,7 +524,9 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderColor: 'rgba(255,255,255,0.42)',
+    borderWidth: 1,
     borderRadius: 18,
     flex: 1,
     flexDirection: 'row',
