@@ -1,0 +1,32 @@
+.git
+.gitignore
+.expo
+node_modules
+dist
+web-build
+npm-debug.*
+
+# Root-level local/deployment files outside the mobile app
+../../.agents
+../../.claude
+../../.expo
+../../.vscode
+../../docs
+../../elkhabiry
+../../ezaby
+../../seif
+../../apps/api
+../../render.yaml
+../../README.md
+../../AGENTS.md
+../../CLAUDE.md
+
+# Local screenshots and scratch media
+../../Screenshot*.png
+../../new.png
+../../*.jpg
+../../*.jpeg
+../../*.webp
+../../*.gif
+../../*.mp4
+../../*.mov
