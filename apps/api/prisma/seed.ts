@@ -1,4 +1,6 @@
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import 'dotenv/config';
+
+import { PrismaPg } from '@prisma/adapter-pg';
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
 
@@ -6,11 +8,15 @@ import { PrismaClient } from '../src/generated/prisma/client';
 
 const scrypt = promisify(crypto.scrypt);
 
-const adapter = new PrismaBetterSqlite3({
-  url: 'file:./prisma/dev.db',
-});
+const connectionString = process.env.DATABASE_URL;
 
-const prisma = new PrismaClient({ adapter });
+if (!connectionString) {
+  throw new Error('DATABASE_URL is required to seed the database.');
+}
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString }),
+});
 
 const categories = [
   {
