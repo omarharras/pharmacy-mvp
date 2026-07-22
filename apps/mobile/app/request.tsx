@@ -21,9 +21,10 @@ import {
 
 import { createOrder, getAddresses, uploadPrescription } from '@/lib/api';
 import { OrderSuccessScreen } from '@/components/order-success-screen';
+import { insuranceStatusCopy, useInsurance } from '@/lib/insurance-context';
 import { CheckoutAddress, useRequest } from '@/lib/request-context';
 
-type PaymentMethod = 'cash' | 'card_on_delivery';
+type PaymentMethod = 'cash' | 'card_on_delivery' | 'insurance';
 
 const colors = {
   brand: '#00b6bd',
@@ -36,10 +37,12 @@ const colors = {
   white: '#FFFFFF',
 };
 
+const maxPrescriptionUploads = 4;
 const timeSlotsFallback = ['13:30 - 14:00', '16:00 - 16:30', '18:00 - 20:00'];
 
 export default function PrescriptionCheckoutScreen() {
   const router = useRouter();
+  const { hasInsuranceProfile, profile: defaultInsuranceProfile, profiles: insuranceProfiles } = useInsurance();
   const {
     addPrescription,
     checkoutAddress,
@@ -57,7 +60,11 @@ export default function PrescriptionCheckoutScreen() {
   );
   const [showTimeSlots, setShowTimeSlots] = useState(false);
   const [confirmByCall, setConfirmByCall] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    defaultInsuranceProfile?.useByDefault ? 'insurance' : 'cash',
+  );
+  const [selectedInsuranceProfileId, setSelectedInsuranceProfileId] = useState(defaultInsuranceProfile?.id ?? null);
+  const [showInsurancePicker, setShowInsurancePicker] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,8 +72,12 @@ export default function PrescriptionCheckoutScreen() {
   const canSubmit =
     prescriptions.length > 0 &&
     Boolean(checkoutAddress) &&
+    (paymentMethod !== 'insurance' || hasInsuranceProfile) &&
     !isUploading &&
     !isSubmitting;
+  const selectedInsuranceProfile = selectedInsuranceProfileId
+    ? insuranceProfiles.find((insuranceProfile) => insuranceProfile.id === selectedInsuranceProfileId) ?? null
+    : null;
   const notes = useMemo(() => {
     const parts = [
       'Prescription pricing: Pending pharmacist review',
@@ -83,12 +94,39 @@ export default function PrescriptionCheckoutScreen() {
       parts.push('Customer requested a confirmation call');
     }
 
+    if (paymentMethod === 'insurance' && selectedInsuranceProfile) {
+      parts.push('Payment preference: Insurance review');
+      parts.push(`Insurance company: ${selectedInsuranceProfile.providerName}`);
+      parts.push(`Insurance card ID: ${selectedInsuranceProfile.memberNumber}`);
+      parts.push(`Insurance cardholder: ${selectedInsuranceProfile.cardholderName}`);
+      parts.push(`Insurance status: ${insuranceStatusCopy(selectedInsuranceProfile.status)}`);
+
+      if (selectedInsuranceProfile.frontImageUrl || selectedInsuranceProfile.backImageUrl) {
+        parts.push('Insurance card images attached in profile');
+      }
+
+      if (selectedInsuranceProfile.nationalIdFrontImageUrl || selectedInsuranceProfile.nationalIdBackImageUrl) {
+        parts.push('National ID images attached in profile');
+      }
+    } else {
+      parts.push(
+        `Payment preference: ${paymentMethod === 'card_on_delivery' ? 'Visa on delivery' : 'Cash on delivery'}`,
+      );
+    }
+
     if (notesText.trim()) {
       parts.push(`Notes: ${notesText.trim()}`);
     }
 
     return parts.join('\n');
-  }, [checkoutAddress, confirmByCall, notesText]);
+  }, [checkoutAddress, confirmByCall, notesText, paymentMethod, selectedInsuranceProfile]);
+
+  useEffect(() => {
+    if (defaultInsuranceProfile?.useByDefault) {
+      setPaymentMethod('insurance');
+      setSelectedInsuranceProfileId(defaultInsuranceProfile.id);
+    }
+  }, [defaultInsuranceProfile]);
 
   useEffect(() => {
     if (checkoutAddress) {
@@ -113,6 +151,11 @@ export default function PrescriptionCheckoutScreen() {
 
   const pickPrescription = async () => {
     setErrorMessage(null);
+
+    if (prescriptions.length >= maxPrescriptionUploads) {
+      Alert.alert('Upload limit reached', `You can upload up to ${maxPrescriptionUploads} prescription images.`);
+      return;
+    }
 
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -184,7 +227,9 @@ export default function PrescriptionCheckoutScreen() {
       setErrorMessage(
         prescriptions.length === 0
           ? 'Upload a prescription image before sending.'
-          : 'Add a delivery address before sending your prescription.',
+          : paymentMethod === 'insurance' && !hasInsuranceProfile
+            ? 'Add an insurance profile before using insurance.'
+            : 'Add a delivery address before sending your prescription.',
       );
       return;
     }
@@ -259,30 +304,45 @@ export default function PrescriptionCheckoutScreen() {
 
       <CheckoutSection title="Prescription image">
         <Text style={styles.helperText}>
-          Upload a clear photo. Pricing will be confirmed after pharmacist review.
+          Upload up to {maxPrescriptionUploads} clear prescription photos. Pricing will be confirmed after pharmacist review.
         </Text>
-        <Pressable style={styles.uploadButton} disabled={isUploading} onPress={pickPrescription}>
-          <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
-          <Text style={styles.uploadButtonText}>{isUploading ? 'Uploading...' : 'Choose image'}</Text>
+        <Pressable
+          style={prescriptions.length >= maxPrescriptionUploads ? styles.uploadButtonDisabled : styles.uploadButton}
+          disabled={isUploading || prescriptions.length >= maxPrescriptionUploads}
+          onPress={pickPrescription}
+        >
+          <Ionicons
+            name={prescriptions.length >= maxPrescriptionUploads ? 'checkmark-circle-outline' : 'cloud-upload-outline'}
+            size={20}
+            color={colors.white}
+          />
+          <Text style={styles.uploadButtonText}>
+            {isUploading
+              ? 'Uploading...'
+              : prescriptions.length >= maxPrescriptionUploads
+                ? 'Upload limit reached'
+                : `Choose image (${prescriptions.length}/${maxPrescriptionUploads})`}
+          </Text>
         </Pressable>
       </CheckoutSection>
 
-      {prescriptions.map((prescription) => (
-        <View key={prescription.id} style={styles.prescriptionCard}>
-          <Image source={{ uri: prescription.localUri }} style={styles.prescriptionImage} />
-          <View style={styles.prescriptionDetails}>
-            <Text style={styles.prescriptionName} numberOfLines={1}>
-              {prescription.originalName}
-            </Text>
-            <Text style={styles.prescriptionMeta}>
-              {Math.max(1, Math.round(prescription.sizeBytes / 1024))} KB uploaded
-            </Text>
-          </View>
-          <Pressable onPress={() => removePrescription(prescription.id)}>
-            <Text style={styles.removeText}>Remove</Text>
-          </Pressable>
+      {prescriptions.length > 0 ? (
+        <View style={styles.prescriptionGrid}>
+          {prescriptions.map((prescription, index) => (
+            <View key={prescription.id} style={styles.prescriptionCard}>
+              <Image source={{ uri: prescription.localUri }} style={styles.prescriptionImage} />
+              <Pressable
+                accessibilityLabel={`Remove prescription image ${index + 1}`}
+                hitSlop={8}
+                style={styles.removeButton}
+                onPress={() => removePrescription(prescription.id)}
+              >
+                <Ionicons name="close" size={16} color={colors.white} />
+              </Pressable>
+            </View>
+          ))}
         </View>
-      ))}
+      ) : null}
 
       <CheckoutSection title="Delivery to">
         {checkoutAddress ? (
@@ -350,24 +410,90 @@ export default function PrescriptionCheckoutScreen() {
         </View>
       </Pressable>
 
-      <Pressable style={styles.optionCard}>
-        <Ionicons name="shield-checkmark-outline" size={27} color={colors.brand} />
-        <Text style={styles.optionCardText}>Select insurance</Text>
-        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-      </Pressable>
+      <Text style={styles.paymentTitle}>Insurance provider</Text>
+      {insuranceProfiles.length > 0 ? (
+        <>
+          <Pressable
+          style={showInsurancePicker ? styles.insuranceDropdownOpen : styles.insuranceDropdown}
+          onPress={() => setShowInsurancePicker((current) => !current)}
+        >
+          <View style={styles.insuranceSelectIcon}>
+            <Ionicons name="shield-checkmark-outline" size={18} color={colors.brand} />
+          </View>
+          <Text style={styles.insuranceDropdownText}>
+            {selectedInsuranceProfile ? selectedInsuranceProfile.providerName : 'No insurance'}
+          </Text>
+          <Ionicons
+            name={showInsurancePicker ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={colors.muted}
+          />
+        </Pressable>
+          {showInsurancePicker ? (
+            <View style={styles.insuranceDropdownList}>
+              <Pressable
+                style={styles.insuranceDropdownOption}
+                onPress={() => {
+                  setPaymentMethod('cash');
+                  setSelectedInsuranceProfileId(null);
+                  setShowInsurancePicker(false);
+                }}
+              >
+                <Text style={styles.insuranceDropdownOptionText}>No insurance</Text>
+                {!selectedInsuranceProfile ? <Ionicons name="checkmark" size={18} color={colors.brand} /> : null}
+              </Pressable>
+              {insuranceProfiles.map((insuranceProfile, index) => {
+                const isSelected = selectedInsuranceProfile?.id === insuranceProfile.id;
+                const isLast = index === insuranceProfiles.length - 1;
+
+                return (
+                  <Pressable
+                    key={insuranceProfile.id}
+                    style={[
+                      isSelected ? styles.insuranceDropdownOptionActive : styles.insuranceDropdownOption,
+                      isLast ? styles.insuranceDropdownOptionLast : null,
+                    ]}
+                    onPress={() => {
+                      setPaymentMethod('insurance');
+                      setSelectedInsuranceProfileId(insuranceProfile.id);
+                      setShowInsurancePicker(false);
+                    }}
+                >
+                  <Text style={isSelected ? styles.insuranceDropdownOptionTextActive : styles.insuranceDropdownOptionText}>
+                    {insuranceProfile.providerName}
+                  </Text>
+                  {isSelected ? <Ionicons name="checkmark" size={19} color={colors.brand} /> : null}
+                </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+        </>
+      ) : (
+        <Pressable style={styles.addInsuranceButton} onPress={() => router.push('/insurance')}>
+          <Ionicons name="add" size={21} color={colors.brand} />
+          <Text style={styles.addInsuranceText}>Add insurance provider</Text>
+        </Pressable>
+      )}
 
       <Text style={styles.paymentTitle}>Payment Type</Text>
       <PaymentOption
         active={paymentMethod === 'cash'}
         icon="cash-outline"
         label="Cash On Delivery"
-        onPress={() => setPaymentMethod('cash')}
+        onPress={() => {
+          setPaymentMethod('cash');
+          setShowInsurancePicker(false);
+        }}
       />
       <PaymentOption
         active={paymentMethod === 'card_on_delivery'}
         icon="card-outline"
         label="Visa On Delivery"
-        onPress={() => setPaymentMethod('card_on_delivery')}
+        onPress={() => {
+          setPaymentMethod('card_on_delivery');
+          setShowInsurancePicker(false);
+        }}
       />
 
       <CheckoutSection title="Additional Note">
@@ -384,7 +510,9 @@ export default function PrescriptionCheckoutScreen() {
       <View style={styles.reviewCard}>
         <Ionicons name="time-outline" size={22} color={colors.brand} />
         <Text style={styles.reviewText}>
-          No payment is collected now. The pharmacy will contact you after review.
+          {paymentMethod === 'insurance'
+            ? 'No payment is collected now. The pharmacy will review insurance eligibility and contact you with the final copay.'
+            : 'No payment is collected now. The pharmacy will contact you after review.'}
         </Text>
       </View>
 
@@ -443,6 +571,7 @@ export default function PrescriptionCheckoutScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
     </ScrollView>
   );
 }
@@ -618,46 +747,49 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: 'center',
   },
+  uploadButtonDisabled: {
+    alignItems: 'center',
+    backgroundColor: '#9CA3AF',
+    borderRadius: 12,
+    flexDirection: 'row',
+    height: 50,
+    justifyContent: 'center',
+  },
   uploadButtonText: {
     color: colors.white,
     fontSize: 15,
     fontWeight: '800',
     marginLeft: 8,
   },
+  prescriptionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+  },
   prescriptionCard: {
-    alignItems: 'center',
     backgroundColor: colors.white,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    flexDirection: 'row',
-    marginBottom: 10,
-    padding: 10,
+    overflow: 'hidden',
+    width: 82,
   },
   prescriptionImage: {
     backgroundColor: '#F0F2F5',
-    borderRadius: 10,
-    height: 56,
-    width: 56,
+    aspectRatio: 1,
+    width: '100%',
   },
-  prescriptionDetails: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  prescriptionName: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  prescriptionMeta: {
-    color: colors.muted,
-    fontSize: 12,
-  },
-  removeText: {
-    color: '#9F1D1D',
-    fontSize: 13,
-    fontWeight: '800',
+  removeButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17,24,39,0.72)',
+    borderRadius: 13,
+    height: 26,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 7,
+    top: 7,
+    width: 26,
   },
   destinationCard: {
     alignItems: 'flex-start',
@@ -701,6 +833,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addAddressText: {
+    color: colors.brand,
+    fontSize: 15,
+    fontWeight: '800',
+    marginLeft: 8,
+  },
+  addInsuranceButton: {
+    alignItems: 'center',
+    backgroundColor: colors.brandSoft,
+    borderColor: '#BCEDEA',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    height: 56,
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  addInsuranceText: {
     color: colors.brand,
     fontSize: 15,
     fontWeight: '800',
@@ -751,6 +900,22 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     marginLeft: 12,
+  },
+  optionCardTextBlock: {
+    flex: 1,
+    marginLeft: 12,
+    paddingRight: 8,
+  },
+  optionCardTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+  optionCardMeta: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   checkbox: {
     alignItems: 'center',
@@ -806,6 +971,88 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     marginLeft: 12,
+  },
+  insuranceDropdown: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 52,
+    marginBottom: 0,
+    paddingHorizontal: 12,
+  },
+  insuranceDropdownOpen: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.brand,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 52,
+    marginBottom: 0,
+    paddingHorizontal: 12,
+  },
+  insuranceSelectIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.brandSoft,
+    borderRadius: 10,
+    height: 32,
+    justifyContent: 'center',
+    marginRight: 10,
+    width: 32,
+  },
+  insuranceDropdownText: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  insuranceDropdownList: {
+    backgroundColor: colors.white,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    borderColor: colors.brand,
+    borderTopWidth: 0,
+    borderWidth: 1,
+    marginBottom: 12,
+    marginTop: -1,
+    overflow: 'hidden',
+  },
+  insuranceDropdownOption: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    minHeight: 50,
+    paddingHorizontal: 14,
+  },
+  insuranceDropdownOptionActive: {
+    alignItems: 'center',
+    backgroundColor: colors.brandSoft,
+    borderBottomColor: '#BCEDEA',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    minHeight: 50,
+    paddingHorizontal: 14,
+  },
+  insuranceDropdownOptionLast: {
+    borderBottomWidth: 0,
+  },
+  insuranceDropdownOptionText: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  insuranceDropdownOptionTextActive: {
+    color: colors.brandDark,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800',
   },
   reviewCard: {
     alignItems: 'center',

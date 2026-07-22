@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { Router } from 'express';
 import { z } from 'zod';
 
+import { getBearerToken } from '../lib/auth';
 import { prisma } from '../lib/prisma';
 
 const scrypt = promisify(crypto.scrypt);
@@ -190,14 +191,6 @@ async function verifyPassword(password: string, storedHash: string) {
   const storedKey = Buffer.from(key, 'hex');
 
   return storedKey.length === derivedKey.length && crypto.timingSafeEqual(storedKey, derivedKey);
-}
-
-function getBearerToken(authorizationHeader: string | undefined) {
-  if (!authorizationHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  return authorizationHeader.slice('Bearer '.length);
 }
 
 function serializeCustomer(customer: {

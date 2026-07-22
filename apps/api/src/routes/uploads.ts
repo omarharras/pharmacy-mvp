@@ -4,6 +4,7 @@ import path from 'node:path';
 import { Router } from 'express';
 import multer from 'multer';
 
+import { requireCustomer } from '../lib/auth';
 import { prisma } from '../lib/prisma';
 
 const uploadDirectory = path.resolve(process.cwd(), 'uploads');
@@ -45,6 +46,35 @@ uploadsRouter.post('/prescriptions', upload.single('prescription'), async (reque
 
     response.status(201).json({
       data: prescription,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+uploadsRouter.post('/insurance', upload.single('insuranceImage'), async (request, response, next) => {
+  try {
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
+    if (!request.file) {
+      response.status(400).json({
+        error: 'Insurance image is required',
+      });
+      return;
+    }
+
+    response.status(201).json({
+      data: {
+        fileName: request.file.filename,
+        mimeType: request.file.mimetype,
+        originalName: request.file.originalname,
+        sizeBytes: request.file.size,
+        url: `/uploads/${request.file.filename}`,
+      },
     });
   } catch (error) {
     next(error);

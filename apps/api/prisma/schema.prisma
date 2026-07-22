@@ -55,8 +55,37 @@ model Customer {
   phone        String   @unique
   passwordHash String
   sessionToken String?  @unique
+  insuranceProfiles InsuranceProfile[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model InsuranceProfile {
+  id                       String          @id @default(cuid())
+  customerId               String
+  cardholderName           String
+  providerName             String
+  memberNumber             String
+  frontImageUrl            String?
+  backImageUrl             String?
+  nationalIdFrontImageUrl  String?
+  nationalIdBackImageUrl   String?
+  status                   InsuranceStatus @default(PENDING_REVIEW)
+  useByDefault             Boolean         @default(false)
+  customer                 Customer        @relation(fields: [customerId], references: [id])
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+}
+
+model InsuranceProvider {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Product {
@@ -214,4 +243,10 @@ enum PricingStatus {
   NOT_REQUIRED
   PENDING_REVIEW
   PRICED
+}
+
+enum InsuranceStatus {
+  NOT_VERIFIED
+  PENDING_REVIEW
+  VERIFIED
 }

@@ -3,6 +3,7 @@ import { Link, useRouter } from 'expo-router';
 import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useInsurance } from '@/lib/insurance-context';
 import { useSession } from '@/lib/session-context';
 
 const colors = {
@@ -18,7 +19,8 @@ const colors = {
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { customer, isLoggedIn, signOut } = useSession();
+  const { profile } = useInsurance();
+  const { customer, isLoggedIn, isRestoringSession, signOut } = useSession();
 
   return (
     <ScrollView
@@ -31,14 +33,18 @@ export default function MoreScreen() {
           <Ionicons name="person-outline" size={25} color={colors.brand} />
         </View>
         <View style={styles.profileTextBlock}>
-          <Text style={styles.profileName}>{customer?.fullName ?? 'Guest customer'}</Text>
+          <Text style={styles.profileName}>
+            {isRestoringSession ? 'Checking session' : customer?.fullName ?? 'Guest customer'}
+          </Text>
           <Text style={styles.profileMeta}>
-            {isLoggedIn
+            {isRestoringSession
+              ? 'Restoring your saved session'
+              : isLoggedIn
               ? 'Manage your saved details and pharmacy orders'
               : 'Sign in to save addresses and view your order history'}
           </Text>
         </View>
-        {isLoggedIn ? (
+        {isRestoringSession ? null : isLoggedIn ? (
           <Pressable style={styles.signInButton}>
             <Text style={styles.signInText}>Edit</Text>
           </Pressable>
@@ -53,6 +59,13 @@ export default function MoreScreen() {
         <MenuSection title="Account">
           <Link href="/addresses" asChild>
             <MenuRow icon="location-outline" label="Saved addresses" />
+          </Link>
+          <Link href="/insurance" asChild>
+            <MenuRow
+              icon="shield-checkmark-outline"
+              label="Insurance profile"
+              value={profile ? 'Saved' : 'Add'}
+            />
           </Link>
           <Link href="/(tabs)/orders" asChild>
             <MenuRow icon="receipt-outline" label="Order history" />

@@ -7,6 +7,8 @@ import { addressesRouter } from './routes/addresses';
 import { branchesRouter } from './routes/branches';
 import { categoriesRouter } from './routes/categories';
 import { healthRouter } from './routes/health';
+import { insuranceProfilesRouter } from './routes/insurance-profiles';
+import { insuranceProvidersRouter } from './routes/insurance-providers';
 import { offersRouter } from './routes/offers';
 import { ordersRouter } from './routes/orders';
 import { productsRouter } from './routes/products';
@@ -21,6 +23,8 @@ app.use('/uploads', express.static('uploads'));
 
 app.use('/health', healthRouter);
 app.use('/auth', authRouter);
+app.use('/insurance-profiles', insuranceProfilesRouter);
+app.use('/insurance-providers', insuranceProvidersRouter);
 app.use('/addresses', addressesRouter);
 app.use('/brands', brandsRouter);
 app.use('/branches', branchesRouter);

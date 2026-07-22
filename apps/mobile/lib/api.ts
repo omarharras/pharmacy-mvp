@@ -106,6 +106,53 @@ export type PrescriptionUpload = {
   createdAt: string;
 };
 
+export type InsuranceStatus = 'NOT_VERIFIED' | 'PENDING_REVIEW' | 'VERIFIED';
+
+export type InsuranceProfile = {
+  backImageUrl: string | null;
+  cardholderName: string;
+  createdAt: string;
+  frontImageUrl: string | null;
+  id: string;
+  memberNumber: string;
+  nationalIdBackImageUrl: string | null;
+  nationalIdFrontImageUrl: string | null;
+  providerName: string;
+  status: InsuranceStatus;
+  updatedAt: string;
+  useByDefault: boolean;
+};
+
+export type InsuranceProvider = {
+  createdAt: string;
+  id: string;
+  isActive: boolean;
+  logoUrl: string | null;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  updatedAt: string;
+};
+
+export type InsuranceProfileInput = {
+  backImageUrl?: string;
+  cardholderName: string;
+  frontImageUrl?: string;
+  memberNumber: string;
+  nationalIdBackImageUrl?: string;
+  nationalIdFrontImageUrl?: string;
+  providerName: string;
+  useByDefault: boolean;
+};
+
+export type UploadedInsuranceImage = {
+  fileName: string;
+  mimeType: string;
+  originalName: string;
+  sizeBytes: number;
+  url: string;
+};
+
 export type Address = {
   id: string;
   addressName: string;
@@ -221,7 +268,19 @@ export type AddressInput = {
 };
 
 async function getJson<T>(path: string) {
-  const response = await fetch(`${apiUrl}${path}`);
+  return getMaybeAuthorizedJson<T>(path);
+}
+
+async function getAuthorizedJson<T>(path: string, token: string) {
+  return getMaybeAuthorizedJson<T>(path, token);
+}
+
+async function getMaybeAuthorizedJson<T>(path: string, token?: string) {
+  const response = await fetch(`${apiUrl}${path}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`API request failed with ${response.status}`);
@@ -242,6 +301,27 @@ async function postAuthorizedJson<T>(path: string, body: unknown, token: string)
 
 async function putJson<T>(path: string, body: unknown) {
   return sendJson<T>(path, body, 'PUT');
+}
+
+async function putAuthorizedJson<T>(path: string, body: unknown, token: string) {
+  return sendJson<T>(path, body, 'PUT', token);
+}
+
+async function deleteAuthorizedJson<T>(path: string, token: string) {
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed with ${response.status}`);
+  }
+
+  const payload = (await response.json()) as ApiResponse<T>;
+
+  return payload.data;
 }
 
 async function sendJson<T>(
@@ -274,6 +354,10 @@ export function signIn(input: { password: string; phone: string }) {
 
 export function signUp(input: { fullName: string; password: string; phone: string }) {
   return postJson<AuthSession>('/auth/signup', input);
+}
+
+export function getCurrentCustomer(token: string) {
+  return getAuthorizedJson<Customer>('/auth/me', token);
 }
 
 export function signOut(token: string) {
@@ -367,6 +451,47 @@ export function uploadPrescription(file: { name: string; type: string; uri: stri
 
     return payload.data;
   });
+}
+
+export function uploadInsuranceImage(file: { name: string; type: string; uri: string }, token: string) {
+  const formData = new FormData();
+  formData.append('insuranceImage', file as unknown as Blob);
+
+  return fetch(`${apiUrl}/uploads/insurance`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  }).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`API request failed with ${response.status}`);
+    }
+
+    const payload = (await response.json()) as ApiResponse<UploadedInsuranceImage>;
+
+    return payload.data;
+  });
+}
+
+export function getInsuranceProfiles(token: string) {
+  return getAuthorizedJson<InsuranceProfile[]>('/insurance-profiles', token);
+}
+
+export function getInsuranceProviders() {
+  return getJson<InsuranceProvider[]>('/insurance-providers');
+}
+
+export function createInsuranceProfile(input: InsuranceProfileInput, token: string) {
+  return postAuthorizedJson<InsuranceProfile>('/insurance-profiles', input, token);
+}
+
+export function setDefaultInsuranceProfile(profileId: string, token: string) {
+  return putAuthorizedJson<InsuranceProfile>(`/insurance-profiles/${profileId}/default`, {}, token);
+}
+
+export function deleteInsuranceProfile(profileId: string, token: string) {
+  return deleteAuthorizedJson<{ deleted: boolean }>(`/insurance-profiles/${profileId}`, token);
 }
 
 export function createOrder(input: CreateOrderInput) {

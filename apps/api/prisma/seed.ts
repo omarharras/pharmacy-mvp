@@ -471,6 +471,39 @@ const brands = [
   { name: 'Femfresh', slug: 'femfresh', sortOrder: 33, isFeatured: false },
 ];
 
+const insuranceProviders = [
+  {
+    logoUrl: '/images/insurance-providers/axa.png',
+    name: 'AXA',
+    slug: 'axa',
+    sortOrder: 1,
+  },
+  {
+    logoUrl: '/images/insurance-providers/metlife.png',
+    name: 'MetLife',
+    slug: 'metlife',
+    sortOrder: 2,
+  },
+  {
+    logoUrl: '/images/insurance-providers/allianz.png',
+    name: 'Allianz',
+    slug: 'allianz',
+    sortOrder: 3,
+  },
+  {
+    logoUrl: '/images/insurance-providers/globemed.png',
+    name: 'GlobeMed',
+    slug: 'globemed',
+    sortOrder: 4,
+  },
+  {
+    logoUrl: '/images/insurance-providers/mednet.png',
+    name: 'MedNet',
+    slug: 'mednet',
+    sortOrder: 5,
+  },
+];
+
 const products = [
   {
     categorySlug: 'medication',
@@ -1074,6 +1107,14 @@ async function main() {
       where: { slug: brand.slug },
       update: brand,
       create: brand,
+    });
+  }
+
+  for (const provider of insuranceProviders) {
+    await prisma.insuranceProvider.upsert({
+      where: { slug: provider.slug },
+      update: provider,
+      create: provider,
     });
   }
 

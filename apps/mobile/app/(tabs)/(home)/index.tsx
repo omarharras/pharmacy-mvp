@@ -20,10 +20,12 @@ import { ProductCard } from '@/components/product-card';
 import {
   Brand,
   Category,
+  InsuranceProvider,
   Offer,
   Product,
   getBrands,
   getCategories,
+  getInsuranceProviders,
   getOffers,
   getProducts,
   resolveImageUrl,
@@ -32,6 +34,7 @@ import {
 type HomeData = {
   brands: Brand[];
   categories: Category[];
+  insuranceProviders: InsuranceProvider[];
   offers: Offer[];
   products: Product[];
 };
@@ -77,6 +80,7 @@ export default function HomeScreen() {
   const [homeData, setHomeData] = useState<HomeData>({
     brands: [],
     categories: [],
+    insuranceProviders: [],
     offers: [],
     products: [],
   });
@@ -91,14 +95,15 @@ export default function HomeScreen() {
     setErrorMessage(null);
 
     try {
-      const [brands, categories, offers, products] = await Promise.all([
+      const [brands, categories, insuranceProviders, offers, products] = await Promise.all([
         getBrands(),
         getCategories(),
+        getInsuranceProviders(),
         getOffers(),
         getProducts(),
       ]);
 
-      setHomeData({ brands, categories, offers, products });
+      setHomeData({ brands, categories, insuranceProviders, offers, products });
     } catch {
       setErrorMessage('Unable to load pharmacy data. Check that the API is running.');
     } finally {
@@ -430,6 +435,40 @@ export default function HomeScreen() {
             ))}
         </ScrollView>
 
+        <SectionHeader title="Insurance providers" href="/insurance-providers" />
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.insuranceRail}
+        >
+          {homeData.insuranceProviders.map((provider) => (
+            <Pressable
+              accessibilityLabel={`Add ${provider.name} insurance card`}
+              key={provider.name}
+              style={styles.insuranceProviderChip}
+              onPress={() => {
+                router.push({
+                  pathname: '/insurance',
+                  params: {
+                    provider: provider.name,
+                  },
+                });
+              }}
+            >
+              {resolveImageUrl(provider.logoUrl) ? (
+                <Image
+                  source={{ uri: resolveImageUrl(provider.logoUrl) ?? undefined }}
+                  resizeMode="contain"
+                  style={styles.insuranceProviderLogo}
+                />
+              ) : (
+                <Text style={styles.insuranceProviderFallback}>{provider.name}</Text>
+              )}
+            </Pressable>
+          ))}
+        </ScrollView>
+
         <SectionHeader title="Popular products" href="/products" />
 
         <ScrollView
@@ -447,7 +486,7 @@ export default function HomeScreen() {
 }
 
 type SectionHeaderProps = {
-  href: '/categories' | '/products';
+  href: '/categories' | '/insurance-providers' | '/products';
   title: string;
 };
 
@@ -668,6 +707,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     marginLeft: 6,
+  },
+  insuranceRail: {
+    gap: 10,
+    paddingBottom: 22,
+    paddingLeft: 20,
+    paddingRight: 8,
+  },
+  insuranceProviderChip: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 64,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    width: 112,
+  },
+  insuranceProviderLogo: {
+    height: 38,
+    width: '100%',
+  },
+  insuranceProviderFallback: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
   },
   stateBox: {
     backgroundColor: '#FFFFFF',
