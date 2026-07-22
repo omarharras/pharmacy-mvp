@@ -26,7 +26,7 @@ import { CheckoutAddress, useRequest } from '@/lib/request-context';
 type PaymentMethod = 'cash' | 'card_on_delivery';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandDark: '#007F7B',
   brandSoft: '#E6F8F7',
   border: '#E5E7EB',
@@ -255,6 +255,8 @@ export default function PrescriptionCheckoutScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageTitle}>Prescription checkout</Text>
+
       <CheckoutSection title="Prescription image">
         <Text style={styles.helperText}>
           Upload a clear photo. Pricing will be confirmed after pharmacist review.
@@ -581,6 +583,12 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingHorizontal: 20,
     paddingBottom: 32,
+  },
+  pageTitle: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
   },
   section: {
     backgroundColor: colors.white,

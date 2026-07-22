@@ -13,7 +13,7 @@ import {
 import { useRequest } from '@/lib/request-context';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   border: '#E5E7EB',
   muted: '#6B7280',
   page: '#F7F8FA',
@@ -130,6 +130,8 @@ export default function AddressScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageTitle}>{addressId ? 'Edit address' : 'Add address'}</Text>
+
       {isLoading ? (
         <View style={styles.stateBox}>
           <Text style={styles.stateText}>Loading address.</Text>
@@ -262,6 +264,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 34,
+  },
+  pageTitle: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
   },
   mapButton: {
     alignItems: 'center',

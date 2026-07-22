@@ -24,7 +24,7 @@ export default function CartScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.emptyIcon}>
-            <Ionicons name="cart-outline" size={42} color="#00A9A5" />
+            <Ionicons name="cart-outline" size={42} color="#00b6bd" />
           </View>
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
           <Text style={styles.emptyText}>Add medicines and pharmacy products to continue.</Text>
@@ -39,6 +39,8 @@ export default function CartScreen() {
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
+            <Text style={styles.pageTitle}>Cart</Text>
+
             <View style={styles.itemsHeader}>
               <Text style={styles.itemsTitle}>Items</Text>
               <Pressable onPress={() => router.push('/categories')}>
@@ -122,6 +124,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 18,
   },
+  pageTitle: {
+    color: '#111827',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
+  },
   emptyContent: {
     alignItems: 'center',
     flexGrow: 1,
@@ -164,7 +172,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   addMoreText: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 13,
     fontWeight: '800',
   },
@@ -226,7 +234,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   itemUnitPrice: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 14,
     fontWeight: '800',
   },
@@ -259,7 +267,7 @@ const styles = StyleSheet.create({
   },
   checkoutButton: {
     alignItems: 'center',
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 7,
@@ -274,7 +282,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
     borderRadius: 14,
     flexDirection: 'row',
     gap: 8,

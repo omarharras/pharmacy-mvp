@@ -5,7 +5,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-na
 import { Branch, getBranches } from '@/lib/api';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandDark: '#007F7B',
   brandSoft: '#E6F8F7',
   border: '#E5E7EB',
@@ -43,6 +43,8 @@ export default function BranchesScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageTitle}>Branches</Text>
+
       <View style={styles.searchBand}>
         <Ionicons name="search-outline" size={20} color={colors.brand} />
         <Text style={styles.searchText}>Search by area or branch name</Text>
@@ -123,6 +125,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 32,
+  },
+  pageTitle: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
   },
   searchBand: {
     alignItems: 'center',

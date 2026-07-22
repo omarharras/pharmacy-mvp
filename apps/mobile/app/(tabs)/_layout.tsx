@@ -2,7 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const activeColor = '#00A9A5';
+import { HeaderLogoTitle } from '@/components/header-logo-title';
+
+const activeColor = '#00b6bd';
 const inactiveColor = '#8A8A8A';
 
 export default function TabsLayout() {
@@ -17,10 +19,8 @@ export default function TabsLayout() {
           backgroundColor: activeColor,
         },
         headerTintColor: '#FFFFFF',
-        headerTitleStyle: {
-          color: '#FFFFFF',
-          fontWeight: '700',
-        },
+        headerTitle: () => <HeaderLogoTitle />,
+        headerTitleAlign: 'center',
         tabBarActiveTintColor: activeColor,
         tabBarInactiveTintColor: inactiveColor,
         tabBarLabelStyle: {

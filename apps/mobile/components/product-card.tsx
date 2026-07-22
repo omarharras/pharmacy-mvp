@@ -13,7 +13,7 @@ type ProductCardProps = {
 };
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   border: '#E5E7EB',
   muted: '#9CA3AF',
   text: '#111827',

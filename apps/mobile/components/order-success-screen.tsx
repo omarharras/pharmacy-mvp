@@ -27,7 +27,7 @@ export function OrderSuccessScreen({
       <View style={styles.hero}>
         <View style={styles.successMarkOuter}>
           <View style={styles.successMarkInner}>
-            <Ionicons name="checkmark" size={64} color="#00A9A5" />
+            <Ionicons name="checkmark" size={64} color="#00b6bd" />
           </View>
         </View>
 
@@ -37,7 +37,7 @@ export function OrderSuccessScreen({
 
       <View style={styles.actionBar}>
         <Pressable style={styles.primaryButton} onPress={onPrimaryPress}>
-          <Ionicons name="receipt-outline" size={20} color="#00A9A5" />
+          <Ionicons name="receipt-outline" size={20} color="#00b6bd" />
           <Text style={styles.primaryButtonText}>{primaryLabel}</Text>
         </Pressable>
 
@@ -52,7 +52,7 @@ export function OrderSuccessScreen({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
   },
   content: {
     flexGrow: 1,
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     alignItems: 'center',
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 8,
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     marginBottom: 11,
   },
   primaryButtonText: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 16,
     fontWeight: '800',
   },

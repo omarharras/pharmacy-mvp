@@ -8,7 +8,7 @@ import { Address, AddressInput, getAddresses, updateAddress } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandDark: '#007F7B',
   brandSoft: '#E6F8F7',
   border: '#E5E7EB',
@@ -78,6 +78,8 @@ export default function AddressesScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageTitle}>Saved addresses</Text>
+
       {isLoading ? (
         <View style={styles.stateCard}>
           <Text style={styles.stateTitle}>Loading addresses</Text>
@@ -198,6 +200,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 32,
+  },
+  pageTitle: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
   },
   addressCard: {
     backgroundColor: colors.white,

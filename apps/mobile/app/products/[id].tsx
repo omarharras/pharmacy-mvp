@@ -80,7 +80,7 @@ export default function ProductDetailScreen() {
                 />
               ) : (
                 <View style={styles.productImageFallback}>
-                  <Ionicons name="medkit-outline" size={42} color="#00A9A5" />
+                  <Ionicons name="medkit-outline" size={42} color="#00b6bd" />
                 </View>
               )}
             </View>
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   price: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 24,
     fontWeight: '800',
   },
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   unitOptionActive: {
     alignItems: 'center',
     backgroundColor: '#E6F8F7',
-    borderColor: '#00A9A5',
+    borderColor: '#00b6bd',
     borderRadius: 10,
     borderWidth: 1,
     flex: 1,
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
   moreDetailsText: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 12,
     fontWeight: '800',
   },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   detailsModalMeta: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 13,
     fontWeight: '800',
     marginBottom: 12,
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     alignItems: 'center',
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
     borderRadius: 14,
     flexDirection: 'row',
     gap: 8,

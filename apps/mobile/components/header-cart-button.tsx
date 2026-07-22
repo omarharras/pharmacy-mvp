@@ -19,7 +19,7 @@ export function HeaderCartButton({ colorScheme = 'light' }: HeaderCartButtonProp
           <Ionicons
             name="cart-outline"
             size={22}
-            color={isLight ? '#00A9A5' : '#FFFFFF'}
+            color={isLight ? '#00b6bd' : '#FFFFFF'}
           />
         </View>
         {itemCount > 0 ? (

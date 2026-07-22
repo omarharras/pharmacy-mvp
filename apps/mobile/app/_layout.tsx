@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 
 import { HeaderCartButton } from '@/components/header-cart-button';
+import { HeaderLogoTitle } from '@/components/header-logo-title';
 import { RequestProvider } from '@/lib/request-context';
 import { SessionProvider } from '@/lib/session-context';
 
@@ -12,14 +13,12 @@ export default function RootLayout() {
           screenOptions={{
             headerBackTitle: 'Back',
             headerStyle: {
-              backgroundColor: '#00A9A5',
+              backgroundColor: '#00b6bd',
             },
             headerShadowVisible: false,
             headerTintColor: '#FFFFFF',
-            headerTitleStyle: {
-              color: '#FFFFFF',
-              fontWeight: '700',
-            },
+            headerTitle: () => <HeaderLogoTitle />,
+            headerTitleAlign: 'center',
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

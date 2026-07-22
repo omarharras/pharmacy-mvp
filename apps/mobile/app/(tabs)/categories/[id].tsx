@@ -6,7 +6,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Category, Subcategory, getCategories, resolveImageUrl } from '@/lib/api';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandSoft: '#E6F8F7',
   border: '#E5E7EB',
   page: '#F7F8FA',
@@ -74,6 +74,8 @@ export default function SubcategoriesScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        <Text style={styles.pageTitle}>{categoryName}</Text>
+
         {isLoading ? (
           <View style={styles.stateBox}>
             <Text style={styles.stateTitle}>Loading subcategories</Text>
@@ -274,6 +276,13 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingHorizontal: 8,
     paddingBottom: 32,
+  },
+  pageTitle: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
+    paddingHorizontal: 6,
   },
   grid: {
     flexDirection: 'row',

@@ -62,6 +62,8 @@ export function ProductListScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+      <Text style={styles.pageTitle}>{catalogName ?? 'Products'}</Text>
+
       {isLoading ? (
         <View style={styles.stateBox}>
           <Text style={styles.stateTitle}>Loading products</Text>
@@ -105,6 +107,13 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingHorizontal: 14,
     paddingBottom: 32,
+  },
+  pageTitle: {
+    color: '#111827',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
+    paddingHorizontal: 6,
   },
   productGrid: {
     flexDirection: 'row',

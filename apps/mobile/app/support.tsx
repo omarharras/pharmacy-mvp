@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandSoft: '#E6F8F7',
   border: '#E5E7EB',
   muted: '#6B7280',

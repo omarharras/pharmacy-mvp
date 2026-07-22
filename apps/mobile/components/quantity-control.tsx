@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     width: 23,
   },
   buttonText: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 16,
     fontWeight: '800',
     lineHeight: 18,
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   largeButton: {
     alignItems: 'center',
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
     borderRadius: 12,
     height: 42,
     justifyContent: 'center',

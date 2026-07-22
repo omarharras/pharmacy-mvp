@@ -24,7 +24,7 @@ type FulfillmentMethod = 'delivery' | 'pickup';
 type PaymentMethod = 'online' | 'cash' | 'card_on_delivery';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandDark: '#007F7B',
   brandSoft: '#E6F8F7',
   border: '#E5E7EB',
@@ -224,6 +224,8 @@ export default function CheckoutScreen() {
         </View>
       ) : (
         <>
+          <Text style={styles.pageTitle}>Checkout</Text>
+
           <CheckoutSection title="Order summary">
             <SummaryRow label="Delivery Date" value={formatSelectedDate(selectedDate)} />
             <SummaryRow label="Delivery Time" value={selectedSlot} />
@@ -623,6 +625,12 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 32,
+  },
+  pageTitle: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
   },
   emptyBox: {
     alignItems: 'center',

@@ -56,6 +56,8 @@ export default function OrdersScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageTitle}>Orders</Text>
+
       {isLoading ? (
         <View style={styles.stateBox}>
           <Text style={styles.stateTitle}>Loading orders</Text>
@@ -104,13 +106,13 @@ export default function OrdersScreen() {
                 <Text style={styles.orderRef}>Order #{order.id.slice(-8).toUpperCase()}</Text>
                 <View style={styles.orderMetaStack}>
                   <View style={styles.orderMetaItem}>
-                    <Ionicons name="time-outline" size={15} color="#00A9A5" />
+                    <Ionicons name="time-outline" size={15} color="#00b6bd" />
                     <Text style={styles.orderMeta}>
                       Created at {formatCreatedDateTime(order.createdAt)}
                     </Text>
                   </View>
                   <View style={styles.orderMetaItem}>
-                    <Ionicons name="calendar-outline" size={15} color="#00A9A5" />
+                    <Ionicons name="calendar-outline" size={15} color="#00b6bd" />
                     <Text style={styles.orderMeta}>
                       Delivery time {formatDeliveryTime(order)}
                     </Text>
@@ -225,6 +227,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 32,
   },
+  pageTitle: {
+    color: '#111827',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
+  },
   stateBox: {
     backgroundColor: '#FFFFFF',
     borderColor: '#CFF2F1',
@@ -306,7 +314,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   statusText: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 12,
     fontWeight: '800',
   },
@@ -345,7 +353,7 @@ const styles = StyleSheet.create({
   },
   timelineIconActive: {
     alignItems: 'center',
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
     borderRadius: 19,
     height: 38,
     justifyContent: 'center',
@@ -357,7 +365,7 @@ const styles = StyleSheet.create({
     width: 38,
   },
   timelineLineActive: {
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
     height: 2,
     width: 38,
   },
@@ -367,7 +375,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   totalText: {
-    color: '#00A9A5',
+    color: '#00b6bd',
     fontSize: 17,
     fontWeight: '800',
   },

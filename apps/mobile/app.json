@@ -59,12 +59,12 @@
           "android": {
             "datePicker": {
               "colorAccent": {
-                "light": "#00A9A5",
-                "dark": "#00A9A5"
+                "light": "#00b6bd",
+                "dark": "#00b6bd"
               },
               "colorControlActivated": {
-                "light": "#00A9A5",
-                "dark": "#00A9A5"
+                "light": "#00b6bd",
+                "dark": "#00b6bd"
               },
               "textColorPrimary": {
                 "light": "#111827",
@@ -85,12 +85,12 @@
                 "dark": "#111827"
               },
               "headerBackground": {
-                "light": "#00A9A5",
-                "dark": "#00A9A5"
+                "light": "#00b6bd",
+                "dark": "#00b6bd"
               },
               "numbersSelectorColor": {
-                "light": "#00A9A5",
-                "dark": "#00A9A5"
+                "light": "#00b6bd",
+                "dark": "#00b6bd"
               },
               "numbersTextColor": {
                 "light": "#111827",

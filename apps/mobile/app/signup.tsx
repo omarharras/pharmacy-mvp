@@ -6,7 +6,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { useSession } from '@/lib/session-context';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandDark: '#007F7B',
   brandSoft: '#E6F8F7',
   border: '#E5E7EB',

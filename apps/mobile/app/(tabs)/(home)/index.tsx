@@ -13,7 +13,9 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HeaderCartButton } from '@/components/header-cart-button';
 import { ProductCard } from '@/components/product-card';
 import {
   Brand,
@@ -35,7 +37,7 @@ type HomeData = {
 };
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandDark: '#007F7B',
   brandSoft: '#E6F8F7',
   border: '#E5E7EB',
@@ -46,17 +48,16 @@ const colors = {
 };
 
 const bannerImageUrls = [
-  '/images/banners/prescription-upload-banner.png?v=5',
-  '/images/banners/monthly-wellness-banner.png?v=5',
-  '/images/banners/skin-care-banner.png?v=5',
-  '/images/banners/baby-care-delivered-banner.png?v=5',
-  '/images/banners/weekly-pharmacy-offers-banner.png?v=5',
-  '/images/banners/chronic-care-refills-banner.png?v=5',
+  '/images/banners/home-tall-pharmacy-delivery.png?v=1',
+  '/images/banners/home-tall-skincare.png?v=1',
+  '/images/banners/home-tall-baby-care.png?v=1',
+  '/images/banners/home-tall-vitamins.png?v=1',
+  '/images/banners/home-tall-offers-prescription.png?v=1',
 ];
 
-const promoGap = 12;
-const promoPeek = 18;
-const promoSideInset = promoPeek + promoGap;
+const promoGap = 0;
+const promoPeek = 0;
+const promoSideInset = promoPeek;
 
 type PromoSlide = {
   href: '/categories' | '/request';
@@ -69,6 +70,7 @@ type PromoSlide = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const promoScrollRef = useRef<ScrollView>(null);
   const activePromoIndexRef = useRef(0);
   const { width: screenWidth } = useWindowDimensions();
@@ -82,7 +84,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const promoWidth = Math.max(screenWidth - promoSideInset * 2, 1);
-  const promoHeight = Math.round(promoWidth / 2.05);
+  const promoHeight = Math.round(promoWidth * 1.24);
 
   const loadHomeData = useCallback(async () => {
     setIsLoading(true);
@@ -236,7 +238,7 @@ export default function HomeScreen() {
                   {resolvedImageUrl ? (
                     <Image
                       source={{ uri: resolvedImageUrl }}
-                      resizeMode="contain"
+                      resizeMode="cover"
                       style={styles.promoImage}
                     />
                   ) : (
@@ -249,6 +251,37 @@ export default function HomeScreen() {
             })}
           </ScrollView>
 
+          <View
+            pointerEvents="box-none"
+            style={[styles.topChrome, { paddingTop: insets.top + 10 }]}
+          >
+            <View style={styles.homeLocationRow}>
+              <View style={styles.locationGroup}>
+                <Ionicons name="location-outline" size={18} color="#E6F8F7" />
+                <Text style={styles.locationLabel}>Deliver to</Text>
+                <Text style={styles.locationText} numberOfLines={1}>
+                  1 Al Moatamed
+                </Text>
+                <Ionicons
+                  name="chevron-down"
+                  size={16}
+                  color={colors.white}
+                  style={styles.locationChevron}
+                />
+              </View>
+              <HeaderCartButton />
+            </View>
+
+            <View style={styles.searchRow}>
+              <Link href="/search" asChild>
+                <Pressable style={styles.searchInput}>
+                  <Ionicons name="search-outline" size={21} color={colors.muted} />
+                  <Text style={styles.searchPlaceholder}>Search medicines and products</Text>
+                </Pressable>
+              </Link>
+            </View>
+          </View>
+
           <View style={styles.promoDots}>
             {promoSlides.map((slide, index) => (
               <View
@@ -260,8 +293,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.actionBand}>
-          <Text style={styles.actionBandTitle}>How can we help?</Text>
-
           <View style={styles.primaryActionRow}>
             <Link href="/categories" asChild>
               <Pressable style={styles.shopAction}>
@@ -440,21 +471,79 @@ const styles = StyleSheet.create({
     backgroundColor: colors.page,
   },
   content: {
-    paddingTop: 18,
+    paddingTop: 0,
     paddingBottom: 32,
   },
   promoSection: {
-    marginBottom: 20,
+    backgroundColor: colors.brand,
+    marginBottom: 14,
+    paddingBottom: 0,
+    position: 'relative',
+  },
+  topChrome: {
+    left: 0,
+    paddingHorizontal: 18,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 2,
+  },
+  homeLocationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    minHeight: 42,
+  },
+  locationGroup: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    paddingRight: 8,
+  },
+  locationLabel: {
+    color: '#E6F8F7',
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 5,
+    marginRight: 4,
+  },
+  locationText: {
+    color: colors.white,
+    flexShrink: 1,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  locationChevron: {
+    marginLeft: 3,
+  },
+  searchRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  searchInput: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    flex: 1,
+    flexDirection: 'row',
+    height: 54,
+    paddingHorizontal: 15,
+  },
+  searchPlaceholder: {
+    color: colors.muted,
+    flex: 1,
+    fontSize: 14,
+    marginLeft: 9,
   },
   promoRail: {
     gap: promoGap,
     paddingHorizontal: promoSideInset,
   },
   promoCard: {
-    backgroundColor: colors.white,
-    borderColor: '#CFF2F1',
-    borderWidth: 1,
-    borderRadius: 18,
+    backgroundColor: colors.brand,
+    borderRadius: 0,
     overflow: 'hidden',
   },
   promoImage: {
@@ -471,11 +560,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: 'rgba(17,24,39,0.18)',
     borderRadius: 999,
+    bottom: 34,
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: -20,
     paddingHorizontal: 7,
     paddingVertical: 5,
+    position: 'absolute',
+    zIndex: 3,
   },
   promoDot: {
     backgroundColor: 'rgba(255,255,255,0.58)',
@@ -492,19 +583,11 @@ const styles = StyleSheet.create({
     width: 18,
   },
   actionBand: {
-    backgroundColor: colors.white,
-    borderColor: colors.border,
-    borderRadius: 16,
-    borderWidth: 1,
     marginHorizontal: 20,
     marginBottom: 22,
-    padding: 14,
-  },
-  actionBandTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    marginBottom: 12,
+    marginTop: -34,
+    position: 'relative',
+    zIndex: 4,
   },
   primaryActionRow: {
     flexDirection: 'row',
@@ -512,18 +595,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   shopAction: {
+    alignItems: 'center',
     backgroundColor: colors.brand,
     borderRadius: 14,
     flex: 1,
+    justifyContent: 'center',
     minHeight: 96,
     padding: 14,
   },
   prescriptionAction: {
+    alignItems: 'center',
     backgroundColor: colors.brandSoft,
     borderColor: '#BCEDEA',
     borderRadius: 14,
     borderWidth: 1,
     flex: 1,
+    justifyContent: 'center',
     minHeight: 96,
     padding: 14,
   },
@@ -550,12 +637,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     lineHeight: 20,
+    textAlign: 'center',
   },
   prescriptionActionTitle: {
     color: colors.brandDark,
     fontSize: 15,
     fontWeight: '800',
     lineHeight: 20,
+    textAlign: 'center',
   },
   utilityRow: {
     flexDirection: 'row',

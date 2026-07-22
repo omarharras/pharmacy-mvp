@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { Stack, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeaderCartButton } from '@/components/header-cart-button';
+import { HeaderLogoTitle } from '@/components/header-logo-title';
 import { HeaderSearchLink } from '@/components/header-search-link';
 
 export default function CategoriesLayout() {
@@ -13,7 +14,7 @@ export default function CategoriesLayout() {
       screenOptions={{
         headerBackTitle: 'Back',
         headerStyle: {
-          backgroundColor: '#00A9A5',
+          backgroundColor: '#00b6bd',
         },
         headerShadowVisible: false,
         headerTintColor: '#FFFFFF',
@@ -46,10 +47,9 @@ export default function CategoriesLayout() {
   );
 }
 
-function CatalogHeader({ back, options, route }: NativeStackHeaderProps) {
+function CatalogHeader({ back }: NativeStackHeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const title = options.title ?? route.name;
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
@@ -67,9 +67,9 @@ function CatalogHeader({ back, options, route }: NativeStackHeaderProps) {
           ) : null}
         </View>
 
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
+        <View style={styles.logoSlot}>
+          <HeaderLogoTitle />
+        </View>
 
         <View style={styles.rightSlot}>
           <HeaderCartButton />
@@ -83,7 +83,7 @@ function CatalogHeader({ back, options, route }: NativeStackHeaderProps) {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#00A9A5',
+    backgroundColor: '#00b6bd',
     paddingBottom: 14,
     paddingHorizontal: 20,
   },
@@ -101,17 +101,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     width: 52,
   },
+  logoSlot: {
+    alignItems: 'center',
+    flex: 1,
+  },
   backButton: {
     alignItems: 'center',
     height: 44,
     justifyContent: 'center',
     width: 44,
-  },
-  title: {
-    color: '#FFFFFF',
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
   },
 });

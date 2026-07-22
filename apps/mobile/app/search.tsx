@@ -63,6 +63,8 @@ export default function SearchScreen() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageTitle}>Search</Text>
+
       <TextInput
         autoFocus
         style={styles.searchInput}
@@ -146,6 +148,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
+  },
+  pageTitle: {
+    color: '#111827',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 16,
   },
   searchInput: {
     height: 52,

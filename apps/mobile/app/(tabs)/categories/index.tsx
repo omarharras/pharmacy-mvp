@@ -6,7 +6,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Category, Subcategory, getCategories, resolveImageUrl } from '@/lib/api';
 
 const colors = {
-  brand: '#00A9A5',
+  brand: '#00b6bd',
   brandSoft: '#E6F8F7',
   border: '#ECEFF3',
   page: '#F5F6F8',
