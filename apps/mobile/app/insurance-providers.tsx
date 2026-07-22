@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { InsuranceProvider, getInsuranceProviders, resolveImageUrl } from '@/lib/api';
 
 const colors = {
@@ -17,9 +18,14 @@ export default function InsuranceProvidersScreen() {
   const router = useRouter();
   const [providers, setProviders] = useState<InsuranceProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadProviders = useCallback(async () => {
-    setIsLoading(true);
+  const loadProviders = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
 
     try {
       setProviders(await getInsuranceProviders());
@@ -27,6 +33,7 @@ export default function InsuranceProvidersScreen() {
       setProviders([]);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -38,11 +45,23 @@ export default function InsuranceProvidersScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          colors={['#00b6bd']}
+          refreshing={isRefreshing}
+          tintColor="#00b6bd"
+          onRefresh={() => {
+            void loadProviders(true);
+          }}
+        />
+      }
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.pageTitle}>Insurance providers</Text>
 
-      {isLoading ? <Text style={styles.stateText}>Loading providers</Text> : null}
+      {isLoading && !isRefreshing ? (
+        <LoadingState />
+      ) : null}
 
       <View style={styles.providerGrid}>
         {providers.map((provider) => (
@@ -119,12 +138,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     fontWeight: '800',
-  },
-  stateText: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 14,
   },
   addBadge: {
     alignItems: 'center',

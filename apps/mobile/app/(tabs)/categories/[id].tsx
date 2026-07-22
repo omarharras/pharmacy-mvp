@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { Category, Subcategory, getCategories, resolveImageUrl } from '@/lib/api';
 
 const colors = {
@@ -26,10 +27,15 @@ export default function SubcategoriesScreen() {
   const [category, setCategory] = useState<Category | null>(null);
   const [expandedSubcategoryIds, setExpandedSubcategoryIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadCategory = useCallback(async () => {
-    setIsLoading(true);
+  const loadCategory = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -41,6 +47,7 @@ export default function SubcategoriesScreen() {
       setErrorMessage('Unable to load subcategories. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [categoryId]);
 
@@ -72,14 +79,23 @@ export default function SubcategoriesScreen() {
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            colors={['#00b6bd']}
+            refreshing={isRefreshing}
+            tintColor="#00b6bd"
+            onRefresh={() => {
+              void loadCategory(true);
+            }}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.pageTitle}>{categoryName}</Text>
 
-        {isLoading ? (
-          <View style={styles.stateBox}>
-            <Text style={styles.stateTitle}>Loading subcategories</Text>
-            <Text style={styles.stateText}>Getting departments under {categoryName}.</Text>
+        {isLoading && !isRefreshing ? (
+          <View style={styles.loadingWrap}>
+            <LoadingState />
           </View>
         ) : null}
 
@@ -87,7 +103,12 @@ export default function SubcategoriesScreen() {
           <View style={styles.errorBox}>
             <Text style={styles.errorTitle}>Could not connect</Text>
             <Text style={styles.errorText}>{errorMessage}</Text>
-            <Pressable style={styles.retryButton} onPress={loadCategory}>
+            <Pressable
+              style={styles.retryButton}
+              onPress={() => {
+                void loadCategory();
+              }}
+            >
               <Text style={styles.retryButtonText}>Retry</Text>
             </Pressable>
           </View>
@@ -380,6 +401,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     marginHorizontal: 12,
     padding: 16,
+  },
+  loadingWrap: {
+    marginHorizontal: 12,
   },
   stateTitle: {
     color: colors.text,

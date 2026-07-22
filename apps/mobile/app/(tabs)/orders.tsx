@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { Link } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { Order, getOrders } from '@/lib/api';
 import { formatPiasters } from '@/lib/request-context';
 
@@ -31,10 +33,15 @@ const prescriptionStatusSteps: Order['status'][] = [
 export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadOrders = useCallback(async () => {
-    setIsLoading(true);
+  const loadOrders = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -43,33 +50,48 @@ export default function OrdersScreen() {
       setErrorMessage('Unable to load orders. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    void loadOrders();
-  }, [loadOrders]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadOrders();
+    }, [loadOrders]),
+  );
 
   return (
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          colors={['#00b6bd']}
+          refreshing={isRefreshing}
+          tintColor="#00b6bd"
+          onRefresh={() => {
+            void loadOrders(true);
+          }}
+        />
+      }
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.pageTitle}>Orders</Text>
 
-      {isLoading ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.stateTitle}>Loading orders</Text>
-          <Text style={styles.stateText}>Getting your active and past orders.</Text>
-        </View>
+      {isLoading && !isRefreshing ? (
+        <LoadingState />
       ) : null}
 
       {errorMessage ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorTitle}>Could not connect</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={loadOrders}>
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => {
+              void loadOrders();
+            }}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>

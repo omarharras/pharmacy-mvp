@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import {
   Address,
   AddressInput,
@@ -40,6 +41,7 @@ export default function AddressScreen() {
   const [isDefault, setIsDefault] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(addressId));
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const canSave =
     fullName.trim().length >= 2 &&
@@ -64,27 +66,33 @@ export default function AddressScreen() {
     setIsDefault(address.isDefault);
   }, []);
 
-  useEffect(() => {
+  const loadAddress = useCallback(async (refreshing = false) => {
     if (!addressId) {
       setIsLoading(false);
+      setIsRefreshing(false);
       return;
     }
 
-    const loadAddress = async () => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
       setIsLoading(true);
-      setErrorMessage(null);
+    }
+    setErrorMessage(null);
 
-      try {
-        fillForm(await getAddress(addressId));
-      } catch {
-        setErrorMessage('Unable to load address. Check that the API is running.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void loadAddress();
+    try {
+      fillForm(await getAddress(addressId));
+    } catch {
+      setErrorMessage('Unable to load address. Check that the API is running.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
   }, [addressId, fillForm]);
+
+  useEffect(() => {
+    void loadAddress();
+  }, [loadAddress]);
 
   const saveAddress = async () => {
     if (!canSave) {
@@ -128,14 +136,23 @@ export default function AddressScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          colors={['#00b6bd']}
+          enabled={Boolean(addressId)}
+          refreshing={isRefreshing}
+          tintColor="#00b6bd"
+          onRefresh={() => {
+            void loadAddress(true);
+          }}
+        />
+      }
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.pageTitle}>{addressId ? 'Edit address' : 'Add address'}</Text>
 
-      {isLoading ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.stateText}>Loading address.</Text>
-        </View>
+      {isLoading && !isRefreshing ? (
+        <LoadingState />
       ) : null}
 
       <Pressable style={styles.mapButton}>
@@ -279,19 +296,6 @@ const styles = StyleSheet.create({
     height: 84,
     justifyContent: 'center',
     marginBottom: 24,
-  },
-  stateBox: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CFF2F1',
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-    padding: 12,
-  },
-  stateText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '700',
   },
   mapButtonText: {
     color: colors.brand,

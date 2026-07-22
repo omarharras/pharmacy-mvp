@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { Branch, getBranches } from '@/lib/api';
 
 const colors = {
@@ -18,10 +19,15 @@ const colors = {
 export default function BranchesScreen() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadBranches = useCallback(async () => {
-    setIsLoading(true);
+  const loadBranches = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -30,6 +36,7 @@ export default function BranchesScreen() {
       setErrorMessage('Unable to load branches. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -41,6 +48,16 @@ export default function BranchesScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          colors={['#00b6bd']}
+          refreshing={isRefreshing}
+          tintColor="#00b6bd"
+          onRefresh={() => {
+            void loadBranches(true);
+          }}
+        />
+      }
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.pageTitle}>Branches</Text>
@@ -56,18 +73,20 @@ export default function BranchesScreen() {
         <Text style={styles.mapText}>Branch map integration can be added after location permission is in scope.</Text>
       </View>
 
-      {isLoading ? (
-        <View style={styles.stateCard}>
-          <Text style={styles.stateTitle}>Loading branches</Text>
-          <Text style={styles.stateText}>Getting available branch locations.</Text>
-        </View>
+      {isLoading && !isRefreshing ? (
+        <LoadingState />
       ) : null}
 
       {errorMessage ? (
         <View style={styles.errorCard}>
           <Text style={styles.errorTitle}>Could not connect</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={loadBranches}>
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => {
+              void loadBranches();
+            }}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -181,14 +200,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 12,
     padding: 14,
-  },
-  stateCard: {
-    backgroundColor: colors.white,
-    borderColor: '#CFF2F1',
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 14,
-    padding: 16,
   },
   stateTitle: {
     color: colors.text,

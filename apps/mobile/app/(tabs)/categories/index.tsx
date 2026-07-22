@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { Category, Subcategory, getCategories, resolveImageUrl } from '@/lib/api';
 
 const colors = {
@@ -21,10 +22,15 @@ export default function CategoriesScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [expandedSubcategoryIds, setExpandedSubcategoryIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadCategories = useCallback(async () => {
-    setIsLoading(true);
+  const loadCategories = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -36,6 +42,7 @@ export default function CategoriesScreen() {
       setErrorMessage('Unable to load categories. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -69,10 +76,7 @@ export default function CategoriesScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centerState}>
-        <Text style={styles.stateTitle}>Loading categories</Text>
-        <Text style={styles.stateText}>Getting pharmacy departments.</Text>
-      </View>
+      <LoadingState variant="center" />
     );
   }
 
@@ -81,7 +85,12 @@ export default function CategoriesScreen() {
       <View style={styles.centerState}>
         <Text style={styles.errorTitle}>Could not connect</Text>
         <Text style={styles.errorText}>{errorMessage}</Text>
-        <Pressable style={styles.retryButton} onPress={loadCategories}>
+        <Pressable
+          style={styles.retryButton}
+          onPress={() => {
+            void loadCategories();
+          }}
+        >
           <Text style={styles.retryButtonText}>Retry</Text>
         </Pressable>
       </View>
@@ -102,6 +111,16 @@ export default function CategoriesScreen() {
       <ScrollView
         style={styles.categoryRail}
         contentContainerStyle={styles.categoryRailContent}
+        refreshControl={
+          <RefreshControl
+            colors={['#00b6bd']}
+            refreshing={isRefreshing}
+            tintColor="#00b6bd"
+            onRefresh={() => {
+              void loadCategories(true);
+            }}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         {categories.map((category) => {
@@ -124,6 +143,16 @@ export default function CategoriesScreen() {
       <ScrollView
         style={styles.detailPane}
         contentContainerStyle={styles.detailContent}
+        refreshControl={
+          <RefreshControl
+            colors={['#00b6bd']}
+            refreshing={isRefreshing}
+            tintColor="#00b6bd"
+            onRefresh={() => {
+              void loadCategories(true);
+            }}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         <Link

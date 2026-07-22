@@ -22,6 +22,11 @@ import { CheckoutAddress, formatPiasters, useRequest } from '@/lib/request-conte
 
 type FulfillmentMethod = 'delivery' | 'pickup';
 type PaymentMethod = 'online' | 'cash' | 'card_on_delivery';
+type AppliedPromoCode = {
+  code: string;
+  discountPiasters: number;
+  label: string;
+};
 
 const colors = {
   brand: '#00b6bd',
@@ -35,6 +40,18 @@ const colors = {
 };
 
 const pickupBranches = ['Maadi branch', 'New Cairo branch', 'Nasr City branch'];
+const promoCodes = {
+  SAVE25: {
+    label: '25 EGP off',
+    type: 'fixed',
+    valuePiasters: 2500,
+  },
+  WELCOME10: {
+    label: '10% off',
+    type: 'percent',
+    valuePercent: 10,
+  },
+} as const;
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -57,11 +74,15 @@ export default function CheckoutScreen() {
   const [confirmByCall, setConfirmByCall] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [notesText, setNotesText] = useState('');
+  const [promoCodeText, setPromoCodeText] = useState('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState<AppliedPromoCode | null>(null);
+  const [promoMessage, setPromoMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedOrderId, setSubmittedOrderId] = useState<string | null>(null);
   const deliveryFeePiasters = 0;
-  const payableTotalPiasters = totalPiasters + deliveryFeePiasters;
+  const promoDiscountPiasters = appliedPromoCode?.discountPiasters ?? 0;
+  const payableTotalPiasters = Math.max(totalPiasters - promoDiscountPiasters, 0) + deliveryFeePiasters;
   const hasDestination = method === 'delivery' ? Boolean(checkoutAddress) : selectedBranch.length > 0;
   const canSubmit = items.length > 0 && hasDestination && acceptedTerms && !isSubmitting;
   const destinationText = method === 'delivery' && checkoutAddress
@@ -95,8 +116,14 @@ export default function CheckoutScreen() {
       parts.push(`Notes: ${notesText.trim()}`);
     }
 
+    if (appliedPromoCode) {
+      parts.push(
+        `Promo code: ${appliedPromoCode.code} (${formatPiasters(appliedPromoCode.discountPiasters)} discount)`,
+      );
+    }
+
     return parts.join('\n');
-  }, [checkoutAddress, confirmByCall, destinationText, notesText]);
+  }, [appliedPromoCode, checkoutAddress, confirmByCall, destinationText, notesText]);
 
   useEffect(() => {
     if (checkoutAddress) {
@@ -185,6 +212,41 @@ export default function CheckoutScreen() {
     }
   };
 
+  const applyPromoCode = () => {
+    const normalizedCode = promoCodeText.trim().toUpperCase();
+    const promoCode = promoCodes[normalizedCode as keyof typeof promoCodes];
+
+    if (!normalizedCode) {
+      setAppliedPromoCode(null);
+      setPromoMessage(null);
+      return;
+    }
+
+    if (!promoCode) {
+      setAppliedPromoCode(null);
+      setPromoMessage('Promo code is not valid.');
+      return;
+    }
+
+    const discountPiasters = promoCode.type === 'fixed'
+      ? Math.min(promoCode.valuePiasters, totalPiasters)
+      : Math.floor((totalPiasters * promoCode.valuePercent) / 100);
+
+    setAppliedPromoCode({
+      code: normalizedCode,
+      discountPiasters,
+      label: promoCode.label,
+    });
+    setPromoCodeText(normalizedCode);
+    setPromoMessage(`${promoCode.label} applied.`);
+  };
+
+  const removePromoCode = () => {
+    setAppliedPromoCode(null);
+    setPromoMessage(null);
+    setPromoCodeText('');
+  };
+
   if (submittedOrderId) {
     const trackSubmittedOrder = () => {
       router.dismissTo('/(tabs)/orders');
@@ -231,9 +293,55 @@ export default function CheckoutScreen() {
             <SummaryRow label="Delivery Time" value={selectedSlot} />
             <SummaryRow label="Order Items" value={`${itemCount} item${itemCount === 1 ? '' : 's'}`} />
             <SummaryRow label="Subtotal" value={formatPiasters(totalPiasters)} />
+            {appliedPromoCode ? (
+              <SummaryRow
+                label={`Promo ${appliedPromoCode.code}`}
+                value={`-${formatPiasters(appliedPromoCode.discountPiasters)}`}
+              />
+            ) : null}
             <SummaryRow label="Delivery fees" value="0 EGP" />
             <View style={styles.summaryDivider} />
             <SummaryRow label="Total" value={formatPiasters(payableTotalPiasters)} strong />
+          </CheckoutSection>
+
+          <CheckoutSection title="Promo code">
+            <View style={styles.promoRow}>
+              <View style={styles.promoInputWrap}>
+                <TextInput
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  editable={!appliedPromoCode}
+                  style={styles.promoInput}
+                  value={promoCodeText}
+                  onChangeText={(value) => {
+                    setPromoCodeText(value);
+                    setPromoMessage(null);
+                  }}
+                  placeholder="Enter code"
+                  placeholderTextColor="#8A8A8A"
+                  returnKeyType="done"
+                  onSubmitEditing={applyPromoCode}
+                />
+                {appliedPromoCode ? (
+                  <Pressable
+                    accessibilityLabel="Remove promo code"
+                    hitSlop={8}
+                    style={styles.promoClearButton}
+                    onPress={removePromoCode}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#9F1D1D" />
+                  </Pressable>
+                ) : null}
+              </View>
+              <Pressable style={styles.promoButton} onPress={applyPromoCode}>
+                <Text style={styles.promoButtonText}>Apply</Text>
+              </Pressable>
+            </View>
+            {promoMessage ? (
+              <Text style={appliedPromoCode ? styles.promoSuccessText : styles.promoErrorText}>
+                {promoMessage}
+              </Text>
+            ) : null}
           </CheckoutSection>
 
           <View style={styles.segmentedControl}>
@@ -699,6 +807,63 @@ const styles = StyleSheet.create({
     height: 1,
     marginBottom: 10,
     marginTop: 2,
+  },
+  promoRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  promoInputWrap: {
+    alignItems: 'center',
+    backgroundColor: colors.page,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    height: 48,
+    paddingLeft: 14,
+    paddingRight: 8,
+  },
+  promoInput: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800',
+    height: '100%',
+    padding: 0,
+  },
+  promoButton: {
+    alignItems: 'center',
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    height: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  promoButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  promoClearButton: {
+    alignItems: 'center',
+    height: 32,
+    justifyContent: 'center',
+    marginLeft: 6,
+    width: 32,
+  },
+  promoSuccessText: {
+    color: colors.brandDark,
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 9,
+  },
+  promoErrorText: {
+    color: '#9F1D1D',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 9,
   },
   segmentedControl: {
     backgroundColor: colors.white,

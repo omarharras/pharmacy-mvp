@@ -6,6 +6,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeaderCartButton } from '@/components/header-cart-button';
+import { LoadingState } from '@/components/loading-state';
 import { ProductCard } from '@/components/product-card';
 import {
   Brand,
@@ -86,12 +88,17 @@ export default function HomeScreen() {
   });
   const [activePromoIndex, setActivePromoIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const promoWidth = Math.max(screenWidth - promoSideInset * 2, 1);
   const promoHeight = Math.round(promoWidth * 1.24);
 
-  const loadHomeData = useCallback(async () => {
-    setIsLoading(true);
+  const loadHomeData = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -108,6 +115,7 @@ export default function HomeScreen() {
       setErrorMessage('Unable to load pharmacy data. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -208,7 +216,20 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.screen}
+      refreshControl={
+        <RefreshControl
+          colors={['#00b6bd']}
+          refreshing={isRefreshing}
+          tintColor="#00b6bd"
+          onRefresh={() => {
+            void loadHomeData(true);
+          }}
+        />
+      }
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.content}>
         <View style={styles.promoSection}>
           <ScrollView
@@ -344,10 +365,9 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {isLoading ? (
-          <View style={styles.stateBox}>
-            <Text style={styles.stateTitle}>Loading pharmacy data</Text>
-            <Text style={styles.stateText}>Getting categories, offers, and products.</Text>
+        {isLoading && !isRefreshing ? (
+          <View style={styles.stateWrap}>
+            <LoadingState />
           </View>
         ) : null}
 
@@ -355,7 +375,12 @@ export default function HomeScreen() {
           <View style={styles.errorBox}>
             <Text style={styles.errorTitle}>Could not connect</Text>
             <Text style={styles.errorText}>{errorMessage}</Text>
-            <Pressable style={styles.retryButton} onPress={loadHomeData}>
+            <Pressable
+              style={styles.retryButton}
+              onPress={() => {
+                void loadHomeData();
+              }}
+            >
               <Text style={styles.retryButtonText}>Retry</Text>
             </Pressable>
           </View>
@@ -734,25 +759,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
-  stateBox: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CFF2F1',
-    borderRadius: 14,
-    borderWidth: 1,
+  stateWrap: {
     marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 16,
-  },
-  stateTitle: {
-    color: '#111827',
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  stateText: {
-    color: '#6B7280',
-    fontSize: 13,
-    lineHeight: 19,
   },
   errorBox: {
     backgroundColor: '#FFF5F5',

@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import {
 
 import { Product, getFilteredProducts } from '@/lib/api';
 
+import { LoadingState } from './loading-state';
 import { ProductCard } from './product-card';
 
 export function ProductListScreen() {
@@ -23,6 +25,7 @@ export function ProductListScreen() {
   }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const categoryId = typeof params.categoryId === 'string' ? params.categoryId : undefined;
@@ -35,8 +38,12 @@ export function ProductListScreen() {
   const brandName = typeof params.brandName === 'string' ? params.brandName : undefined;
   const catalogName = brandName ?? subcategoryName ?? categoryName;
 
-  const loadProducts = useCallback(async () => {
-    setIsLoading(true);
+  const loadProducts = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -46,6 +53,7 @@ export function ProductListScreen() {
       setErrorMessage('Unable to load products. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [brandId, categoryId, subcategoryId]);
 
@@ -60,22 +68,34 @@ export function ProductListScreen() {
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            colors={['#00b6bd']}
+            refreshing={isRefreshing}
+            tintColor="#00b6bd"
+            onRefresh={() => {
+              void loadProducts(true);
+            }}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
       <Text style={styles.pageTitle}>{catalogName ?? 'Products'}</Text>
 
-      {isLoading ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.stateTitle}>Loading products</Text>
-          <Text style={styles.stateText}>Getting pharmacy catalog items.</Text>
-        </View>
+      {isLoading && !isRefreshing ? (
+        <LoadingState />
       ) : null}
 
       {errorMessage ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorTitle}>Could not connect</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={loadProducts}>
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => {
+              void loadProducts();
+            }}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -119,25 +139,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-  },
-  stateBox: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CFF2F1',
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 20,
-    padding: 16,
-  },
-  stateTitle: {
-    color: '#111827',
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  stateText: {
-    color: '#6B7280',
-    fontSize: 13,
-    lineHeight: 19,
   },
   errorBox: {
     backgroundColor: '#FFF5F5',

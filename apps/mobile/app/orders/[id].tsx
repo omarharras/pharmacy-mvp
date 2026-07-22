@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { Order, getOrder, resolveImageUrl } from '@/lib/api';
 import { formatPiasters } from '@/lib/request-context';
 
@@ -33,16 +34,22 @@ export default function OrderDetailsScreen() {
   const orderId = typeof params.id === 'string' ? params.id : '';
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadOrder = useCallback(async () => {
+  const loadOrder = useCallback(async (refreshing = false) => {
     if (!orderId) {
       setErrorMessage('Order id is missing.');
       setIsLoading(false);
+      setIsRefreshing(false);
       return;
     }
 
-    setIsLoading(true);
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -51,6 +58,7 @@ export default function OrderDetailsScreen() {
       setErrorMessage('Unable to load order details. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [orderId]);
 
@@ -69,17 +77,32 @@ export default function OrderDetailsScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          colors={['#00b6bd']}
+          refreshing={isRefreshing}
+          tintColor="#00b6bd"
+          onRefresh={() => {
+            void loadOrder(true);
+          }}
+        />
+      }
       showsVerticalScrollIndicator={false}
     >
-      {isLoading ? (
-        <StateCard title="Loading order" text="Getting order details." />
+      {isLoading && !isRefreshing ? (
+        <LoadingState />
       ) : null}
 
       {errorMessage ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorTitle}>Could not connect</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={loadOrder}>
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => {
+              void loadOrder();
+            }}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -161,15 +184,6 @@ export default function OrderDetailsScreen() {
         </>
       ) : null}
     </ScrollView>
-  );
-}
-
-function StateCard({ text, title }: { text: string; title: string }) {
-  return (
-    <View style={styles.stateBox}>
-      <Text style={styles.stateTitle}>{title}</Text>
-      <Text style={styles.stateText}>{text}</Text>
-    </View>
   );
 }
 

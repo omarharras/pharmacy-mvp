@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { Product, getProducts, resolveImageUrl } from '@/lib/api';
 
 export default function SearchScreen() {
@@ -18,10 +20,15 @@ export default function SearchScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchText, setSearchText] = useState(initialQuery);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadProducts = useCallback(async () => {
-    setIsLoading(true);
+  const loadProducts = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -31,6 +38,7 @@ export default function SearchScreen() {
       setErrorMessage('Unable to load products. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -61,6 +69,16 @@ export default function SearchScreen() {
       style={styles.screen}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
+      refreshControl={
+        <RefreshControl
+          colors={['#00b6bd']}
+          refreshing={isRefreshing}
+          tintColor="#00b6bd"
+          onRefresh={() => {
+            void loadProducts(true);
+          }}
+        />
+      }
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.pageTitle}>Search</Text>
@@ -75,18 +93,20 @@ export default function SearchScreen() {
         returnKeyType="search"
       />
 
-      {isLoading ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.stateTitle}>Loading products</Text>
-          <Text style={styles.stateText}>Getting searchable catalog items.</Text>
-        </View>
+      {isLoading && !isRefreshing ? (
+        <LoadingState />
       ) : null}
 
       {errorMessage ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorTitle}>Could not connect</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={loadProducts}>
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => {
+              void loadProducts();
+            }}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -206,25 +226,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
     lineHeight: 20,
-  },
-  stateBox: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CFF2F1',
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 20,
-    padding: 16,
-  },
-  stateTitle: {
-    color: '#111827',
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  stateText: {
-    color: '#6B7280',
-    fontSize: 13,
-    lineHeight: 19,
   },
   errorBox: {
     backgroundColor: '#FFF5F5',

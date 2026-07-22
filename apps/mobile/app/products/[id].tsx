@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { QuantityControl } from '@/components/quantity-control';
 import { Product, ProductUnit, getProduct, resolveImageUrl } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
@@ -13,18 +14,24 @@ export default function ProductDetailScreen() {
   const productId = typeof params.id === 'string' ? params.id : '';
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
-  const loadProduct = useCallback(async () => {
+  const loadProduct = useCallback(async (refreshing = false) => {
     if (!productId) {
       setErrorMessage('Product id is missing.');
       setIsLoading(false);
+      setIsRefreshing(false);
       return;
     }
 
-    setIsLoading(true);
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -35,6 +42,7 @@ export default function ProductDetailScreen() {
       setErrorMessage('Unable to load this product. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [productId]);
 
@@ -50,12 +58,21 @@ export default function ProductDetailScreen() {
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            colors={['#00b6bd']}
+            refreshing={isRefreshing}
+            tintColor="#00b6bd"
+            onRefresh={() => {
+              void loadProduct(true);
+            }}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
-          <View style={styles.stateBox}>
-            <Text style={styles.stateTitle}>Loading product</Text>
-            <Text style={styles.stateText}>Getting product details.</Text>
+        {isLoading && !isRefreshing ? (
+          <View style={styles.stateWrap}>
+            <LoadingState />
           </View>
         ) : null}
 
@@ -63,7 +80,12 @@ export default function ProductDetailScreen() {
           <View style={styles.errorBox}>
             <Text style={styles.errorTitle}>Could not connect</Text>
             <Text style={styles.errorText}>{errorMessage}</Text>
-            <Pressable style={styles.retryButton} onPress={loadProduct}>
+            <Pressable
+              style={styles.retryButton}
+              onPress={() => {
+                void loadProduct();
+              }}
+            >
               <Text style={styles.retryButtonText}>Retry</Text>
             </Pressable>
           </View>
@@ -538,24 +560,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
-  stateBox: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CFF2F1',
-    borderRadius: 14,
-    borderWidth: 1,
+  stateWrap: {
     marginBottom: 20,
-    padding: 16,
-  },
-  stateTitle: {
-    color: '#111827',
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  stateText: {
-    color: '#6B7280',
-    fontSize: 13,
-    lineHeight: 19,
+    marginHorizontal: 20,
+    marginTop: 20,
   },
   errorBox: {
     backgroundColor: '#FFF5F5',

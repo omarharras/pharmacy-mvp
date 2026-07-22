@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LoadingState } from '@/components/loading-state';
 import { Address, AddressInput, getAddresses, updateAddress } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
 
@@ -23,12 +24,17 @@ export default function AddressesScreen() {
   const checkoutAddressRef = useRef(checkoutAddress);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingDefaultId, setUpdatingDefaultId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   checkoutAddressRef.current = checkoutAddress;
 
-  const loadAddresses = useCallback(async () => {
-    setIsLoading(true);
+  const loadAddresses = useCallback(async (refreshing = false) => {
+    if (refreshing) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
 
     try {
@@ -43,6 +49,7 @@ export default function AddressesScreen() {
       setErrorMessage('Unable to load addresses. Check that the API is running.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [setCheckoutAddress]);
 
@@ -76,22 +83,34 @@ export default function AddressesScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          colors={['#00b6bd']}
+          refreshing={isRefreshing}
+          tintColor="#00b6bd"
+          onRefresh={() => {
+            void loadAddresses(true);
+          }}
+        />
+      }
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.pageTitle}>Saved addresses</Text>
 
-      {isLoading ? (
-        <View style={styles.stateCard}>
-          <Text style={styles.stateTitle}>Loading addresses</Text>
-          <Text style={styles.stateText}>Getting your saved delivery addresses.</Text>
-        </View>
+      {isLoading && !isRefreshing ? (
+        <LoadingState />
       ) : null}
 
       {errorMessage ? (
         <View style={styles.errorCard}>
           <Text style={styles.errorTitle}>Could not connect</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={loadAddresses}>
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => {
+              void loadAddresses();
+            }}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
         </View>
@@ -283,14 +302,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 14,
     padding: 24,
-  },
-  stateCard: {
-    backgroundColor: colors.white,
-    borderColor: '#CFF2F1',
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 14,
-    padding: 16,
   },
   stateTitle: {
     color: colors.text,
