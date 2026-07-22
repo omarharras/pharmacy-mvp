@@ -5,6 +5,30 @@ import { prisma } from '../lib/prisma';
 
 export const productsRouter = Router();
 
+async function getSubcategoryAndDescendantIds(subcategoryId: string) {
+  const subcategories = await prisma.subcategory.findMany({
+    select: {
+      id: true,
+      parentId: true,
+    },
+  });
+  const ids = new Set([subcategoryId]);
+  let didAdd = true;
+
+  while (didAdd) {
+    didAdd = false;
+
+    for (const subcategory of subcategories) {
+      if (subcategory.parentId && ids.has(subcategory.parentId) && !ids.has(subcategory.id)) {
+        ids.add(subcategory.id);
+        didAdd = true;
+      }
+    }
+  }
+
+  return [...ids];
+}
+
 function getUnitLabel(packageSize: string) {
   const value = packageSize.toLowerCase();
 
@@ -70,12 +94,19 @@ productsRouter.get('/', async (request, response, next) => {
     const subcategoryId =
       typeof request.query.subcategoryId === 'string' ? request.query.subcategoryId : undefined;
     const brandId = typeof request.query.brandId === 'string' ? request.query.brandId : undefined;
+    const subcategoryIds = subcategoryId
+      ? await getSubcategoryAndDescendantIds(subcategoryId)
+      : undefined;
 
     const products = await prisma.product.findMany({
       where: {
         brandId,
         categoryId,
-        subcategoryId,
+        subcategoryId: subcategoryIds
+          ? {
+              in: subcategoryIds,
+            }
+          : undefined,
         ...(query
           ? {
               OR: [

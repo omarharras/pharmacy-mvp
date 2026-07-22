@@ -23,12 +23,15 @@ model Category {
 model Subcategory {
   id          String    @id @default(cuid())
   categoryId  String
+  parentId    String?
   name        String
   slug        String    @unique
   description String?
   imageUrl    String?
   sortOrder   Int       @default(0)
   category    Category  @relation(fields: [categoryId], references: [id])
+  parent      Subcategory?  @relation("SubcategoryChildren", fields: [parentId], references: [id])
+  children    Subcategory[] @relation("SubcategoryChildren")
   products    Product[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

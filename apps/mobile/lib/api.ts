@@ -32,11 +32,13 @@ export type Category = {
 export type Subcategory = {
   id: string;
   categoryId: string;
+  parentId: string | null;
   name: string;
   slug: string;
   description: string | null;
   imageUrl: string | null;
   sortOrder: number;
+  children?: Subcategory[];
 };
 
 export type Brand = {
