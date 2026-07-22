@@ -20,16 +20,18 @@ new.png
 *.mov
 
 # Backend files not needed for the mobile APK build
-apps/api/dist
-apps/api/public/images
-apps/api/uploads
-apps/api/prisma/dev.db
-apps/api/prisma/dev.db-*
-apps/api/src/generated
-apps/api/node_modules
+apps/api
 
 # Local Expo/build output
 apps/mobile/.expo
+apps/mobile/app-example
 apps/mobile/dist
 apps/mobile/web-build
 apps/mobile/node_modules
+apps/mobile/expo-env.d.ts
+
+# Non-mobile deployment/docs files
+AGENTS.md
+CLAUDE.md
+README.md
+render.yaml
