@@ -4,9 +4,8 @@ services:
     runtime: node
     plan: free
     buildCommand: npm ci && npm run api:build
-    preDeployCommand: npm run api:db:push
     initialDeployHook: npm run api:db:seed
-    startCommand: npm --workspace @pharmacy/api run start
+    startCommand: npm run api:db:push && npm --workspace @pharmacy/api run start
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
