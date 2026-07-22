@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
@@ -426,7 +426,15 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        <SectionHeader title="Brands" href="/products" />
+        <SectionHeader
+          title="Brands"
+          href={{
+            pathname: '/categories',
+            params: {
+              section: 'brands',
+            },
+          }}
+        />
 
         <ScrollView
           horizontal
@@ -511,7 +519,7 @@ export default function HomeScreen() {
 }
 
 type SectionHeaderProps = {
-  href: '/categories' | '/insurance-providers' | '/products';
+  href: Href;
   title: string;
 };
 

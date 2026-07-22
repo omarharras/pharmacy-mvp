@@ -6,18 +6,18 @@
 node_modules
 
 # Documentation and local reference media
-docs
-elkhabiry
-ezaby
-seif
-Screenshot*.png
-new.png
-*.jpg
-*.jpeg
-*.webp
-*.gif
-*.mp4
-*.mov
+/docs
+/elkhabiry
+/ezaby
+/seif
+/Screenshot*.png
+/new.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.gif
+/*.mp4
+/*.mov
 
 # Backend files not needed for the mobile APK build
 apps/api

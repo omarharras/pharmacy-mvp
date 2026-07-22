@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -66,7 +65,7 @@ export default function InsuranceProvidersScreen() {
       <View style={styles.providerGrid}>
         {providers.map((provider) => (
           <Pressable
-            accessibilityLabel={`Add ${provider.name} insurance card`}
+            accessibilityLabel={`Select ${provider.name} insurance provider`}
             key={provider.name}
             style={styles.providerCard}
             onPress={() => {
@@ -87,9 +86,6 @@ export default function InsuranceProvidersScreen() {
             ) : (
               <Text style={styles.providerFallback}>{provider.name}</Text>
             )}
-            <View style={styles.addBadge}>
-              <Ionicons name="add" size={17} color={colors.brand} />
-            </View>
           </Pressable>
         ))}
       </View>
@@ -138,16 +134,5 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     fontWeight: '800',
-  },
-  addBadge: {
-    alignItems: 'center',
-    backgroundColor: '#E6F8F7',
-    borderRadius: 13,
-    bottom: 8,
-    height: 26,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 8,
-    width: 26,
   },
 });

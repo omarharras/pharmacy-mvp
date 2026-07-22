@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingState } from '@/components/loading-state';
-import { Category, Subcategory, getCategories, resolveImageUrl } from '@/lib/api';
+import { Brand, Category, Subcategory, getBrands, getCategories, resolveImageUrl } from '@/lib/api';
 
 const colors = {
   brand: '#00b6bd',
@@ -17,8 +17,13 @@ const colors = {
   white: '#FFFFFF',
 };
 
+const brandsRailId = '__brands__';
+
 export default function CategoriesScreen() {
+  const params = useLocalSearchParams<{ section?: string }>();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [brandSearchQuery, setBrandSearchQuery] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [expandedSubcategoryIds, setExpandedSubcategoryIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -34,9 +39,10 @@ export default function CategoriesScreen() {
     setErrorMessage(null);
 
     try {
-      const data = await getCategories();
-      setCategories(data);
-      setSelectedCategoryId((currentId) => currentId ?? data[0]?.id ?? null);
+      const [nextCategories, nextBrands] = await Promise.all([getCategories(), getBrands()]);
+      setCategories(nextCategories);
+      setBrands(nextBrands);
+      setSelectedCategoryId((currentId) => currentId ?? brandsRailId);
       setExpandedSubcategoryIds(new Set());
     } catch {
       setErrorMessage('Unable to load categories. Check that the API is running.');
@@ -50,10 +56,19 @@ export default function CategoriesScreen() {
     void loadCategories();
   }, [loadCategories]);
 
+  useEffect(() => {
+    if (params.section === 'brands') {
+      setSelectedCategoryId(brandsRailId);
+      setBrandSearchQuery('');
+      setExpandedSubcategoryIds(new Set());
+    }
+  }, [params.section]);
+
   const selectedCategory = useMemo(
-    () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0] ?? null,
+    () => categories.find((category) => category.id === selectedCategoryId) ?? null,
     [categories, selectedCategoryId],
   );
+  const isBrandsSelected = selectedCategoryId === brandsRailId;
 
   function selectCategory(category: Category) {
     setSelectedCategoryId(category.id);
@@ -97,7 +112,7 @@ export default function CategoriesScreen() {
     );
   }
 
-  if (!selectedCategory) {
+  if (!selectedCategory && !isBrandsSelected) {
     return (
       <View style={styles.centerState}>
         <Text style={styles.stateTitle}>No categories found</Text>
@@ -123,8 +138,21 @@ export default function CategoriesScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        <Pressable
+          style={[styles.railItem, isBrandsSelected ? styles.selectedRailItem : null]}
+          onPress={() => {
+            setSelectedCategoryId(brandsRailId);
+            setBrandSearchQuery('');
+            setExpandedSubcategoryIds(new Set());
+          }}
+        >
+          <Text style={[styles.railText, isBrandsSelected ? styles.selectedRailText : null]}>
+            Brands
+          </Text>
+        </Pressable>
+
         {categories.map((category) => {
-          const isSelected = category.id === selectedCategory.id;
+          const isSelected = category.id === selectedCategoryId;
 
           return (
             <Pressable
@@ -155,32 +183,126 @@ export default function CategoriesScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <Link
-          href={{
-            pathname: '/categories/products',
-            params: {
-              categoryId: selectedCategory.id,
-              categoryName: selectedCategory.name,
-            },
-          }}
-          asChild
-        >
-          <Pressable style={styles.allProductsButton}>
-            <Text style={styles.allProductsText}>View all products</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.brand} />
-          </Pressable>
-        </Link>
+        {isBrandsSelected ? (
+          <View style={styles.subcategoryPanel}>
+            <BrandGrid
+              brands={brands}
+              searchQuery={brandSearchQuery}
+              onSearchQueryChange={setBrandSearchQuery}
+            />
+          </View>
+        ) : selectedCategory ? (
+          <>
+            <Link
+              href={{
+                pathname: '/categories/products',
+                params: {
+                  categoryId: selectedCategory.id,
+                  categoryName: selectedCategory.name,
+                },
+              }}
+              asChild
+            >
+              <Pressable style={styles.allProductsButton}>
+                <Text style={styles.allProductsText}>View all products</Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.brand} />
+              </Pressable>
+            </Link>
 
-        <View style={styles.subcategoryPanel}>
-          <SubcategoryGroupList
-            category={selectedCategory}
-            expandedSubcategoryIds={expandedSubcategoryIds}
-            subcategories={selectedCategory.subcategories}
-            onToggle={toggleSubcategory}
-          />
-        </View>
+            <View style={styles.subcategoryPanel}>
+              <SubcategoryGroupList
+                category={selectedCategory}
+                expandedSubcategoryIds={expandedSubcategoryIds}
+                subcategories={selectedCategory.subcategories}
+                onToggle={toggleSubcategory}
+              />
+            </View>
+          </>
+        ) : null}
       </ScrollView>
     </View>
+  );
+}
+
+function BrandGrid({
+  brands,
+  searchQuery,
+  onSearchQueryChange,
+}: {
+  brands: Brand[];
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+}) {
+  const filteredBrands = brands.filter((brand) =>
+    brand.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+  );
+
+  if (brands.length === 0) {
+    return (
+      <View style={styles.emptyPanel}>
+        <Text style={styles.stateTitle}>No brands found</Text>
+        <Text style={styles.stateText}>Check back soon for pharmacy brands.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <View style={styles.brandSearchWrap}>
+        <Ionicons name="search-outline" size={18} color={colors.muted} />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+          placeholder="Search brands"
+          placeholderTextColor={colors.muted}
+          style={styles.brandSearchInput}
+          value={searchQuery}
+          onChangeText={onSearchQueryChange}
+        />
+      </View>
+
+      {filteredBrands.length === 0 ? (
+        <View style={styles.emptyPanel}>
+          <Text style={styles.stateTitle}>No brands found</Text>
+          <Text style={styles.stateText}>Try another brand name.</Text>
+        </View>
+      ) : (
+        <View style={styles.subcategoryList}>
+          {filteredBrands.map((brand) => (
+            <View key={brand.id} style={styles.tileSlot}>
+              <Link
+                href={{
+                  pathname: '/categories/products',
+                  params: {
+                    brandId: brand.id,
+                    brandName: brand.name,
+                  },
+                }}
+                asChild
+              >
+                <Pressable style={styles.childTile}>
+                  <View style={styles.childImageWrap}>
+                    {resolveImageUrl(brand.logoUrl) ? (
+                      <Image
+                        source={{ uri: resolveImageUrl(brand.logoUrl) ?? undefined }}
+                        resizeMode="contain"
+                        style={styles.childImage}
+                      />
+                    ) : (
+                      <Text style={styles.brandInitial}>{brand.name.slice(0, 1)}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.childName} numberOfLines={2}>
+                    {brand.name}
+                  </Text>
+                </Pressable>
+              </Link>
+            </View>
+          ))}
+        </View>
+      )}
+    </>
   );
 }
 
@@ -455,6 +577,34 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     minHeight: 32,
     textAlign: 'center',
+  },
+  brandSearchWrap: {
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    margin: 12,
+    minHeight: 44,
+    paddingHorizontal: 12,
+  },
+  brandSearchInput: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    minWidth: 0,
+    paddingVertical: 9,
+  },
+  brandInitial: {
+    color: colors.brand,
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  emptyPanel: {
+    padding: 16,
   },
   centerState: {
     backgroundColor: colors.page,
