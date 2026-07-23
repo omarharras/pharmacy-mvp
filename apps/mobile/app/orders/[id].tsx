@@ -3,9 +3,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
-import { Order, getOrder, resolveImageUrl } from '@/lib/api';
+import { Order, getOrder, resolveProductImageUrl } from '@/lib/api';
 import { formatPiasters } from '@/lib/request-context';
+import { useSession } from '@/lib/session-context';
 
 const colors = {
   brand: '#00b6bd',
@@ -32,12 +34,24 @@ const prescriptionSteps: Order['status'][] = ['PENDING_REVIEW', 'RECEIVED', 'PRE
 export default function OrderDetailsScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const orderId = typeof params.id === 'string' ? params.id : '';
+  const { isRestoringSession, token } = useSession();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadOrder = useCallback(async (refreshing = false) => {
+    if (!token) {
+      if (!isRestoringSession) {
+        setShowAuthPrompt(true);
+        setIsLoading(false);
+        setIsRefreshing(false);
+        setErrorMessage(null);
+      }
+      return;
+    }
+
     if (!orderId) {
       setErrorMessage('Order id is missing.');
       setIsLoading(false);
@@ -53,14 +67,14 @@ export default function OrderDetailsScreen() {
     setErrorMessage(null);
 
     try {
-      setOrder(await getOrder(orderId));
+      setOrder(await getOrder(orderId, token));
     } catch {
       setErrorMessage('Unable to load order details. Check that the API is running.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [orderId]);
+  }, [isRestoringSession, orderId, token]);
 
   useEffect(() => {
     void loadOrder();
@@ -140,15 +154,11 @@ export default function OrderDetailsScreen() {
               {order.items.map((item) => (
                 <View key={item.id} style={styles.itemRow}>
                   <View style={styles.itemImage}>
-                    {resolveImageUrl(item.product.imageUrl) ? (
-                      <Image
-                        source={{ uri: resolveImageUrl(item.product.imageUrl) ?? undefined }}
-                        resizeMode="contain"
-                        style={styles.itemPhoto}
-                      />
-                    ) : (
-                      <Text style={styles.itemImageText}>Product</Text>
-                    )}
+                    <Image
+                      source={{ uri: resolveProductImageUrl(item.product.imageUrl) ?? undefined }}
+                      resizeMode="contain"
+                      style={styles.itemPhoto}
+                    />
                   </View>
                   <View style={styles.itemText}>
                     <Text style={styles.itemName} numberOfLines={2}>{item.product.name}</Text>
@@ -183,6 +193,11 @@ export default function OrderDetailsScreen() {
           </Section>
         </>
       ) : null}
+      <AuthRequiredModal
+        returnTo={`/orders/${orderId}`}
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+      />
     </ScrollView>
   );
 }
@@ -458,10 +473,6 @@ const styles = StyleSheet.create({
     height: 54,
     justifyContent: 'center',
     width: 54,
-  },
-  itemImageText: {
-    color: '#9CA3AF',
-    fontSize: 10,
   },
   itemPhoto: {
     height: '88%',

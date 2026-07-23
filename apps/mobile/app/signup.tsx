@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -18,6 +18,8 @@ const colors = {
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ returnTo?: string }>();
+  const returnTo = typeof params.returnTo === 'string' ? params.returnTo : null;
   const { signUp } = useSession();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -44,7 +46,7 @@ export default function SignUpScreen() {
         password,
         phone: phone.trim(),
       });
-      router.replace('/(tabs)/more');
+      router.replace((returnTo ?? '/(tabs)/more') as Href);
     } catch {
       Alert.alert('Create account failed', 'This phone may already be registered.');
     } finally {
@@ -119,7 +121,14 @@ export default function SignUpScreen() {
 
       <View style={styles.footerRow}>
         <Text style={styles.footerText}>Already have an account?</Text>
-        <Pressable onPress={() => router.replace('/signin')}>
+        <Pressable
+          onPress={() => {
+            router.replace({
+              pathname: '/signin',
+              params: returnTo ? { returnTo } : undefined,
+            });
+          }}
+        >
           <Text style={styles.footerLink}>Sign in</Text>
         </Pressable>
       </View>

@@ -5,6 +5,7 @@ import DateTimePicker, {
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Modal,
   Platform,
@@ -16,9 +17,11 @@ import {
   View,
 } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { createOrder, getAddresses } from '@/lib/api';
 import { OrderSuccessScreen } from '@/components/order-success-screen';
 import { CheckoutAddress, formatPiasters, useRequest } from '@/lib/request-context';
+import { useSession } from '@/lib/session-context';
 
 type FulfillmentMethod = 'delivery' | 'pickup';
 type PaymentMethod = 'online' | 'cash' | 'card_on_delivery';
@@ -55,6 +58,8 @@ const promoCodes = {
 
 export default function CheckoutScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { token } = useSession();
   const {
     checkoutAddress,
     clearProducts,
@@ -66,6 +71,8 @@ export default function CheckoutScreen() {
   const [method, setMethod] = useState<FulfillmentMethod>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimeSlots, setShowTimeSlots] = useState(false);
   const availableSlots = useMemo(() => getAvailableTimeSlots(selectedDate), [selectedDate]);
@@ -77,6 +84,9 @@ export default function CheckoutScreen() {
   const [promoCodeText, setPromoCodeText] = useState('');
   const [appliedPromoCode, setAppliedPromoCode] = useState<AppliedPromoCode | null>(null);
   const [promoMessage, setPromoMessage] = useState<string | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<CheckoutAddress[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const [addressPickerError, setAddressPickerError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedOrderId, setSubmittedOrderId] = useState<string | null>(null);
@@ -126,13 +136,14 @@ export default function CheckoutScreen() {
   }, [appliedPromoCode, checkoutAddress, confirmByCall, destinationText, notesText]);
 
   useEffect(() => {
-    if (checkoutAddress) {
+    if (!token || checkoutAddress) {
       return;
     }
 
     const loadDefaultAddress = async () => {
       try {
-        const addresses = await getAddresses();
+        const addresses = await getAddresses(token);
+        setSavedAddresses(addresses);
         const defaultAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
 
         if (defaultAddress) {
@@ -144,7 +155,7 @@ export default function CheckoutScreen() {
     };
 
     void loadDefaultAddress();
-  }, [checkoutAddress, setCheckoutAddress]);
+  }, [checkoutAddress, setCheckoutAddress, token]);
 
   const changeDate = (_event: DateTimePickerEvent, date?: Date) => {
     setShowDatePicker(false);
@@ -169,7 +180,45 @@ export default function CheckoutScreen() {
     setShowDatePicker(true);
   };
 
+  const openAddressPicker = async () => {
+    if (!token) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    setShowAddressPicker(true);
+    setIsLoadingAddresses(savedAddresses.length === 0);
+    setAddressPickerError(null);
+
+    try {
+      setSavedAddresses(await getAddresses(token));
+    } catch {
+      setAddressPickerError('Unable to load addresses. Check that the API is running.');
+    } finally {
+      setIsLoadingAddresses(false);
+    }
+  };
+
+  const selectAddress = (address: CheckoutAddress) => {
+    setCheckoutAddress(address);
+    setShowAddressPicker(false);
+  };
+
+  const addCheckoutAddress = () => {
+    if (!token) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    router.push('/address');
+  };
+
   const submit = async () => {
+    if (!token) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     if (!canSubmit) {
       setErrorMessage(
         !hasDestination
@@ -183,25 +232,28 @@ export default function CheckoutScreen() {
     setErrorMessage(null);
 
     try {
-      const order = await createOrder({
-        type: 'PRODUCT_ORDER',
-        customer,
-        items: items.map((item) => ({
-          productId: item.product.id,
-          productUnitId: item.unit.id,
-          quantity: item.quantity,
-        })),
-        prescriptionUploadIds: [],
-        checkout: {
-          confirmByCall,
-          deliveryDate: formatSelectedDate(selectedDate),
-          deliveryFeePiasters,
-          deliveryTimeSlot: selectedSlot,
-          fulfillmentMethod: method === 'delivery' ? 'DELIVERY' : 'PICKUP',
-          paymentMethod: toApiPaymentMethod(paymentMethod),
+      const order = await createOrder(
+        {
+          type: 'PRODUCT_ORDER',
+          customer,
+          items: items.map((item) => ({
+            productId: item.product.id,
+            productUnitId: item.unit.id,
+            quantity: item.quantity,
+          })),
+          prescriptionUploadIds: [],
+          checkout: {
+            confirmByCall,
+            deliveryDate: formatSelectedDate(selectedDate),
+            deliveryFeePiasters,
+            deliveryTimeSlot: selectedSlot,
+            fulfillmentMethod: method === 'delivery' ? 'DELIVERY' : 'PICKUP',
+            paymentMethod: toApiPaymentMethod(paymentMethod),
+          },
+          notes,
         },
-        notes,
-      });
+        token,
+      );
 
       clearProducts();
       setSubmittedOrderId(order.id);
@@ -288,62 +340,6 @@ export default function CheckoutScreen() {
         <>
           <Text style={styles.pageTitle}>Checkout</Text>
 
-          <CheckoutSection title="Order summary">
-            <SummaryRow label="Delivery Date" value={formatSelectedDate(selectedDate)} />
-            <SummaryRow label="Delivery Time" value={selectedSlot} />
-            <SummaryRow label="Order Items" value={`${itemCount} item${itemCount === 1 ? '' : 's'}`} />
-            <SummaryRow label="Subtotal" value={formatPiasters(totalPiasters)} />
-            {appliedPromoCode ? (
-              <SummaryRow
-                label={`Promo ${appliedPromoCode.code}`}
-                value={`-${formatPiasters(appliedPromoCode.discountPiasters)}`}
-              />
-            ) : null}
-            <SummaryRow label="Delivery fees" value="0 EGP" />
-            <View style={styles.summaryDivider} />
-            <SummaryRow label="Total" value={formatPiasters(payableTotalPiasters)} strong />
-          </CheckoutSection>
-
-          <CheckoutSection title="Promo code">
-            <View style={styles.promoRow}>
-              <View style={styles.promoInputWrap}>
-                <TextInput
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  editable={!appliedPromoCode}
-                  style={styles.promoInput}
-                  value={promoCodeText}
-                  onChangeText={(value) => {
-                    setPromoCodeText(value);
-                    setPromoMessage(null);
-                  }}
-                  placeholder="Enter code"
-                  placeholderTextColor="#8A8A8A"
-                  returnKeyType="done"
-                  onSubmitEditing={applyPromoCode}
-                />
-                {appliedPromoCode ? (
-                  <Pressable
-                    accessibilityLabel="Remove promo code"
-                    hitSlop={8}
-                    style={styles.promoClearButton}
-                    onPress={removePromoCode}
-                  >
-                    <Ionicons name="close-circle" size={20} color="#9F1D1D" />
-                  </Pressable>
-                ) : null}
-              </View>
-              <Pressable style={styles.promoButton} onPress={applyPromoCode}>
-                <Text style={styles.promoButtonText}>Apply</Text>
-              </Pressable>
-            </View>
-            {promoMessage ? (
-              <Text style={appliedPromoCode ? styles.promoSuccessText : styles.promoErrorText}>
-                {promoMessage}
-              </Text>
-            ) : null}
-          </CheckoutSection>
-
           <View style={styles.segmentedControl}>
             <SegmentButton
               active={method === 'delivery'}
@@ -369,19 +365,15 @@ export default function CheckoutScreen() {
                     <Text style={styles.destinationText}>{checkoutAddress.phone}</Text>
                     <Text style={styles.destinationText}>{formatAddress(checkoutAddress)}</Text>
                   </View>
-                  <Link href="/addresses" asChild>
-                    <Pressable>
-                      <Text style={styles.changeText}>Change</Text>
-                    </Pressable>
-                  </Link>
+                  <Pressable onPress={openAddressPicker}>
+                    <Text style={styles.changeText}>Change</Text>
+                  </Pressable>
                 </View>
               ) : (
-                <Link href="/address" asChild>
-                  <Pressable style={styles.addAddressButton}>
-                    <Ionicons name="add" size={21} color={colors.brand} />
-                    <Text style={styles.addAddressText}>Complete Address</Text>
-                  </Pressable>
-                </Link>
+                <Pressable style={styles.addAddressButton} onPress={addCheckoutAddress}>
+                  <Ionicons name="add" size={21} color={colors.brand} />
+                  <Text style={styles.addAddressText}>Complete Address</Text>
+                </Pressable>
               )}
             </CheckoutSection>
           ) : (
@@ -437,12 +429,14 @@ export default function CheckoutScreen() {
 
           <Modal
             animationType="fade"
+            navigationBarTranslucent
             transparent
+            statusBarTranslucent
             visible={showTimeSlots}
             onRequestClose={() => setShowTimeSlots(false)}
           >
             <Pressable style={styles.modalBackdrop} onPress={() => setShowTimeSlots(false)}>
-              <Pressable style={styles.timeModal}>
+              <Pressable style={[styles.timeModal, { paddingBottom: 20 + insets.bottom }]}>
                 <View style={styles.timeModalHeader}>
                   <Text style={styles.timeModalTitle}>Select time</Text>
                   <Pressable onPress={() => setShowTimeSlots(false)}>
@@ -475,6 +469,80 @@ export default function CheckoutScreen() {
             </Pressable>
           </Modal>
 
+          <Modal
+            animationType="fade"
+            navigationBarTranslucent
+            transparent
+            statusBarTranslucent
+            visible={showAddressPicker}
+            onRequestClose={() => setShowAddressPicker(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setShowAddressPicker(false)}>
+              <Pressable style={[styles.addressModal, { paddingBottom: 20 + insets.bottom }]}>
+                <View style={styles.timeModalHeader}>
+                  <Text style={styles.timeModalTitle}>Select address</Text>
+                  <Pressable onPress={() => setShowAddressPicker(false)}>
+                    <Ionicons name="close" size={22} color={colors.text} />
+                  </Pressable>
+                </View>
+
+                {isLoadingAddresses && savedAddresses.length === 0 ? (
+                  <Text style={styles.addressModalStateText}>Loading addresses...</Text>
+                ) : null}
+
+                {addressPickerError ? (
+                  <Text style={styles.addressModalErrorText}>{addressPickerError}</Text>
+                ) : null}
+
+                {!isLoadingAddresses && !addressPickerError && savedAddresses.length === 0 ? (
+                  <Text style={styles.addressModalStateText}>No saved addresses yet.</Text>
+                ) : null}
+
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {savedAddresses.map((address) => {
+                    const isSelected = checkoutAddress?.id === address.id;
+
+                    return (
+                      <Pressable
+                        key={address.id}
+                        style={isSelected ? styles.addressModalOptionActive : styles.addressModalOption}
+                        onPress={() => selectAddress(address)}
+                      >
+                        <Ionicons
+                          name={isSelected ? 'checkmark-circle' : 'location-outline'}
+                          size={22}
+                          color={isSelected ? colors.brand : colors.muted}
+                        />
+                        <View style={styles.addressModalTextBlock}>
+                          <Text style={styles.addressModalName}>{address.addressName}</Text>
+                          <Text style={styles.addressModalText}>{address.phone}</Text>
+                          <Text style={styles.addressModalText}>{formatAddress(address)}</Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                <Pressable
+                  style={styles.addressModalAddButton}
+                  onPress={() => {
+                    setShowAddressPicker(false);
+                    router.push('/address');
+                  }}
+                >
+                  <Ionicons name="add" size={20} color={colors.brand} />
+                  <Text style={styles.addressModalAddText}>Add new address</Text>
+                </Pressable>
+              </Pressable>
+            </Pressable>
+          </Modal>
+
+          <AuthRequiredModal
+            returnTo="/checkout"
+            visible={showAuthPrompt}
+            onClose={() => setShowAuthPrompt(false)}
+          />
+
           <Pressable
             style={styles.optionCard}
             onPress={() => setConfirmByCall((current) => !current)}
@@ -497,17 +565,62 @@ export default function CheckoutScreen() {
             />
           </CheckoutSection>
 
-          <Text style={styles.paymentTitle}>Payment Type</Text>
-          <Pressable
-            style={styles.termsRow}
-            onPress={() => setAcceptedTerms((current) => !current)}
-          >
-            <View style={acceptedTerms ? styles.checkboxActive : styles.checkbox}>
-              {acceptedTerms ? <Ionicons name="checkmark" size={15} color={colors.white} /> : null}
-            </View>
-            <Text style={styles.termsText}>I accept terms and conditions & refund policy</Text>
-          </Pressable>
+          <View style={styles.promoSection}>
+            <Ionicons name="ticket-outline" size={20} color={colors.brand} />
+            <TextInput
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={!appliedPromoCode}
+              style={styles.promoInput}
+              value={promoCodeText}
+              onChangeText={(value) => {
+                setPromoCodeText(value);
+                setPromoMessage(null);
+              }}
+              placeholder="Promo code"
+              placeholderTextColor="#8A8A8A"
+              returnKeyType="done"
+              onSubmitEditing={applyPromoCode}
+            />
+            {appliedPromoCode ? (
+              <Pressable
+                accessibilityLabel="Remove promo code"
+                hitSlop={8}
+                style={styles.promoIconButton}
+                onPress={removePromoCode}
+              >
+                <Ionicons name="close-circle" size={20} color="#9F1D1D" />
+              </Pressable>
+            ) : (
+              <Pressable style={styles.promoTextButton} onPress={applyPromoCode}>
+                <Text style={styles.promoButtonText}>Apply</Text>
+              </Pressable>
+            )}
+            {promoMessage ? (
+              <Text style={appliedPromoCode ? styles.promoSuccessText : styles.promoErrorText}>
+                {promoMessage}
+              </Text>
+            ) : null}
+          </View>
 
+          <CheckoutSection title="Order summary">
+            <SummaryRow label="Delivery Date" value={formatSelectedDate(selectedDate)} />
+            <SummaryRow label="Delivery Time" value={selectedSlot} />
+            <SummaryRow label="Order Items" value={`${itemCount} item${itemCount === 1 ? '' : 's'}`} />
+            <SummaryRow label="Subtotal" value={formatPiasters(totalPiasters)} />
+            {appliedPromoCode ? (
+              <SummaryRow
+                label={`Promo ${appliedPromoCode.code}`}
+                tone="discount"
+                value={`-${formatPiasters(appliedPromoCode.discountPiasters)}`}
+              />
+            ) : null}
+            <SummaryRow label="Delivery fees" value="0 EGP" />
+            <View style={styles.summaryDivider} />
+            <SummaryRow label="Total" value={formatPiasters(payableTotalPiasters)} strong />
+          </CheckoutSection>
+
+          <Text style={styles.paymentTitle}>Payment Type</Text>
           <PaymentOption
             active={paymentMethod === 'online'}
             disabled
@@ -528,6 +641,16 @@ export default function CheckoutScreen() {
             onPress={() => setPaymentMethod('card_on_delivery')}
           />
 
+          <Pressable
+            style={styles.termsRow}
+            onPress={() => setAcceptedTerms((current) => !current)}
+          >
+            <View style={acceptedTerms ? styles.checkboxActive : styles.checkbox}>
+              {acceptedTerms ? <Ionicons name="checkmark" size={15} color={colors.white} /> : null}
+            </View>
+            <Text style={styles.termsText}>I accept terms and conditions & refund policy</Text>
+          </Pressable>
+
           {errorMessage ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{errorMessage}</Text>
@@ -536,7 +659,7 @@ export default function CheckoutScreen() {
 
           <Pressable
             style={canSubmit ? styles.primaryButton : styles.disabledButton}
-            disabled={!canSubmit}
+            disabled={!token ? false : !canSubmit}
             onPress={submit}
           >
             <Text style={styles.primaryButtonText}>
@@ -700,14 +823,25 @@ function PaymentOption({
 type SummaryRowProps = {
   label: string;
   strong?: boolean;
+  tone?: 'default' | 'discount';
   value: string;
 };
 
-function SummaryRow({ label, strong = false, value }: SummaryRowProps) {
+function SummaryRow({ label, strong = false, tone = 'default', value }: SummaryRowProps) {
   return (
     <View style={styles.summaryRow}>
       <Text style={strong ? styles.summaryLabelStrong : styles.summaryLabel}>{label}</Text>
-      <Text style={strong ? styles.summaryValueStrong : styles.summaryValue}>{value}</Text>
+      <Text
+        style={
+          strong
+            ? styles.summaryValueStrong
+            : tone === 'discount'
+              ? styles.summaryValueDiscount
+              : styles.summaryValue
+        }
+      >
+        {value}
+      </Text>
     </View>
   );
 }
@@ -792,6 +926,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
+  summaryValueDiscount: {
+    color: '#0F8A55',
+    fontSize: 15,
+    fontWeight: '800',
+  },
   summaryLabelStrong: {
     color: '#8B9098',
     fontSize: 16,
@@ -808,62 +947,56 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 2,
   },
-  promoRow: {
+  promoSection: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-  },
-  promoInputWrap: {
-    alignItems: 'center',
-    backgroundColor: colors.page,
+    backgroundColor: colors.white,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    flex: 1,
     flexDirection: 'row',
-    height: 48,
-    paddingLeft: 14,
-    paddingRight: 8,
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+    minHeight: 50,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   promoInput: {
     color: colors.text,
     flex: 1,
     fontSize: 15,
     fontWeight: '800',
-    height: '100%',
     padding: 0,
   },
-  promoButton: {
+  promoTextButton: {
     alignItems: 'center',
-    backgroundColor: colors.brand,
-    borderRadius: 12,
-    height: 48,
+    minHeight: 28,
     justifyContent: 'center',
-    paddingHorizontal: 18,
   },
   promoButtonText: {
-    color: colors.white,
+    color: colors.brand,
     fontSize: 14,
     fontWeight: '800',
   },
-  promoClearButton: {
+  promoIconButton: {
     alignItems: 'center',
-    height: 32,
+    height: 28,
     justifyContent: 'center',
-    marginLeft: 6,
-    width: 32,
+    width: 28,
   },
   promoSuccessText: {
     color: colors.brandDark,
     fontSize: 13,
     fontWeight: '800',
-    marginTop: 9,
+    marginLeft: 30,
+    width: '100%',
   },
   promoErrorText: {
     color: '#9F1D1D',
     fontSize: 13,
     fontWeight: '800',
-    marginTop: 9,
+    marginLeft: 30,
+    width: '100%',
   },
   segmentedControl: {
     backgroundColor: colors.white,
@@ -1060,6 +1193,84 @@ const styles = StyleSheet.create({
     color: colors.brandDark,
     fontSize: 15,
     fontWeight: '800',
+  },
+  addressModal: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    maxHeight: '72%',
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  addressModalOption: {
+    alignItems: 'flex-start',
+    backgroundColor: colors.page,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  addressModalOptionActive: {
+    alignItems: 'flex-start',
+    backgroundColor: colors.brandSoft,
+    borderColor: colors.brand,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  addressModalTextBlock: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  addressModalName: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 4,
+    textTransform: 'capitalize',
+  },
+  addressModalText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  addressModalStateText: {
+    color: colors.muted,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  addressModalErrorText: {
+    color: '#7F1D1D',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  addressModalAddButton: {
+    alignItems: 'center',
+    borderColor: colors.brand,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    height: 48,
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  addressModalAddText: {
+    color: colors.brand,
+    fontSize: 15,
+    fontWeight: '800',
+    marginLeft: 7,
   },
   optionCard: {
     alignItems: 'center',

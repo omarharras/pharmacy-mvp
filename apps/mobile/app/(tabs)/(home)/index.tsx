@@ -458,7 +458,15 @@ export default function HomeScreen() {
               >
                 <Pressable style={styles.brandRailItem}>
                   <View style={styles.brandMark}>
-                    <Text style={styles.brandInitial}>{brand.name.slice(0, 1)}</Text>
+                    {resolveImageUrl(brand.logoUrl) ? (
+                      <Image
+                        source={{ uri: resolveImageUrl(brand.logoUrl) ?? undefined }}
+                        resizeMode="contain"
+                        style={styles.brandLogo}
+                      />
+                    ) : (
+                      <Text style={styles.brandInitial}>{brand.name.slice(0, 1)}</Text>
+                    )}
                   </View>
                   <Text style={styles.brandText} numberOfLines={2}>
                     {brand.name}
@@ -878,6 +886,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
     width: 94,
+  },
+  brandLogo: {
+    height: 38,
+    width: 76,
   },
   brandInitial: {
     color: colors.brand,

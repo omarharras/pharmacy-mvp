@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
 import {
   Address,
@@ -12,6 +13,7 @@ import {
   updateAddress,
 } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
+import { useSession } from '@/lib/session-context';
 
 const colors = {
   brand: '#00b6bd',
@@ -27,6 +29,7 @@ export default function AddressScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const addressId = typeof params.id === 'string' ? params.id : null;
   const { setCheckoutAddress } = useRequest();
+  const { isRestoringSession, token } = useSession();
   const [addressName, setAddressName] = useState('home');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -43,6 +46,7 @@ export default function AddressScreen() {
   const [isLoading, setIsLoading] = useState(Boolean(addressId));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const canSave =
     fullName.trim().length >= 2 &&
     phone.trim().length >= 8 &&
@@ -67,6 +71,15 @@ export default function AddressScreen() {
   }, []);
 
   const loadAddress = useCallback(async (refreshing = false) => {
+    if (!token) {
+      if (!isRestoringSession) {
+        setShowAuthPrompt(true);
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+      return;
+    }
+
     if (!addressId) {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -81,20 +94,25 @@ export default function AddressScreen() {
     setErrorMessage(null);
 
     try {
-      fillForm(await getAddress(addressId));
+      fillForm(await getAddress(addressId, token));
     } catch {
       setErrorMessage('Unable to load address. Check that the API is running.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [addressId, fillForm]);
+  }, [addressId, fillForm, isRestoringSession, token]);
 
   useEffect(() => {
     void loadAddress();
   }, [loadAddress]);
 
   const saveAddress = async () => {
+    if (!token) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     if (!canSave) {
       setErrorMessage('Enter name, phone, city, area, street, and building.');
       return;
@@ -120,8 +138,8 @@ export default function AddressScreen() {
 
     try {
       const savedAddress = addressId
-        ? await updateAddress(addressId, address)
-        : await createAddress(address);
+        ? await updateAddress(addressId, address, token)
+        : await createAddress(address, token);
 
       setCheckoutAddress(savedAddress);
       router.back();
@@ -268,6 +286,11 @@ export default function AddressScreen() {
       >
         <Text style={styles.saveButtonText}>{isSaving ? 'Saving...' : 'Save Address'}</Text>
       </Pressable>
+      <AuthRequiredModal
+        returnTo={addressId ? `/address?id=${addressId}` : '/address'}
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+      />
     </ScrollView>
   );
 }

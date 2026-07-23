@@ -19,10 +19,12 @@ import {
   View,
 } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { createOrder, getAddresses, uploadPrescription } from '@/lib/api';
 import { OrderSuccessScreen } from '@/components/order-success-screen';
 import { insuranceStatusCopy, useInsurance } from '@/lib/insurance-context';
 import { CheckoutAddress, useRequest } from '@/lib/request-context';
+import { useSession } from '@/lib/session-context';
 
 type PaymentMethod = 'cash' | 'card_on_delivery' | 'insurance';
 
@@ -42,6 +44,7 @@ const timeSlotsFallback = ['13:30 - 14:00', '16:00 - 16:30', '18:00 - 20:00'];
 
 export default function PrescriptionCheckoutScreen() {
   const router = useRouter();
+  const { token } = useSession();
   const { hasInsuranceProfile, profile: defaultInsuranceProfile, profiles: insuranceProfiles } = useInsurance();
   const {
     addPrescription,
@@ -64,6 +67,7 @@ export default function PrescriptionCheckoutScreen() {
     defaultInsuranceProfile?.useByDefault ? 'insurance' : 'cash',
   );
   const [selectedInsuranceProfileId, setSelectedInsuranceProfileId] = useState(defaultInsuranceProfile?.id ?? null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [showInsurancePicker, setShowInsurancePicker] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -129,13 +133,13 @@ export default function PrescriptionCheckoutScreen() {
   }, [defaultInsuranceProfile]);
 
   useEffect(() => {
-    if (checkoutAddress) {
+    if (!token || checkoutAddress) {
       return;
     }
 
     const loadDefaultAddress = async () => {
       try {
-        const addresses = await getAddresses();
+        const addresses = await getAddresses(token);
         const defaultAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
 
         if (defaultAddress) {
@@ -147,7 +151,7 @@ export default function PrescriptionCheckoutScreen() {
     };
 
     void loadDefaultAddress();
-  }, [checkoutAddress, setCheckoutAddress]);
+  }, [checkoutAddress, setCheckoutAddress, token]);
 
   const pickPrescription = async () => {
     setErrorMessage(null);
@@ -223,6 +227,11 @@ export default function PrescriptionCheckoutScreen() {
   };
 
   const submit = async () => {
+    if (!token) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     if (!canSubmit) {
       setErrorMessage(
         prescriptions.length === 0
@@ -242,25 +251,28 @@ export default function PrescriptionCheckoutScreen() {
     setErrorMessage(null);
 
     try {
-      const order = await createOrder({
-        type: 'PRESCRIPTION_REQUEST',
-        customer: {
-          address: formatAddress(checkoutAddress),
-          name: checkoutAddress.fullName,
-          phone: checkoutAddress.phone,
+      const order = await createOrder(
+        {
+          type: 'PRESCRIPTION_REQUEST',
+          customer: {
+            address: formatAddress(checkoutAddress),
+            name: checkoutAddress.fullName,
+            phone: checkoutAddress.phone,
+          },
+          items: [],
+          prescriptionUploadIds: prescriptions.map((prescription) => prescription.id),
+          checkout: {
+            confirmByCall,
+            deliveryDate: formatSelectedDate(selectedDate),
+            deliveryFeePiasters: 0,
+            deliveryTimeSlot: selectedSlot,
+            fulfillmentMethod: 'DELIVERY',
+            paymentMethod: toApiPaymentMethod(paymentMethod),
+          },
+          notes,
         },
-        items: [],
-        prescriptionUploadIds: prescriptions.map((prescription) => prescription.id),
-        checkout: {
-          confirmByCall,
-          deliveryDate: formatSelectedDate(selectedDate),
-          deliveryFeePiasters: 0,
-          deliveryTimeSlot: selectedSlot,
-          fulfillmentMethod: 'DELIVERY',
-          paymentMethod: toApiPaymentMethod(paymentMethod),
-        },
-        notes,
-      });
+        token,
+      );
 
       clearPrescriptions();
       setSubmittedOrderId(order.id);
@@ -524,7 +536,7 @@ export default function PrescriptionCheckoutScreen() {
 
       <Pressable
         style={canSubmit ? styles.primaryButton : styles.disabledButton}
-        disabled={!canSubmit}
+        disabled={!token ? false : !canSubmit}
         onPress={submit}
       >
         <Text style={styles.primaryButtonText}>
@@ -571,6 +583,12 @@ export default function PrescriptionCheckoutScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <AuthRequiredModal
+        returnTo="/request"
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+      />
 
     </ScrollView>
   );

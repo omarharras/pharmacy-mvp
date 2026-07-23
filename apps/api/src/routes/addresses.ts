@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
+import { requireCustomer } from '../lib/auth';
 import { prisma } from '../lib/prisma';
 
 const addressSchema = z.object({
@@ -20,8 +21,14 @@ const addressSchema = z.object({
 
 export const addressesRouter = Router();
 
-addressesRouter.get('/', async (_request, response, next) => {
+addressesRouter.get('/', async (request, response, next) => {
   try {
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
     const addresses = await prisma.address.findMany({
       orderBy: [
         {
@@ -31,6 +38,9 @@ addressesRouter.get('/', async (_request, response, next) => {
           updatedAt: 'desc',
         },
       ],
+      where: {
+        customerId: customer.id,
+      },
     });
 
     response.json({ data: addresses });
@@ -41,8 +51,15 @@ addressesRouter.get('/', async (_request, response, next) => {
 
 addressesRouter.get('/:id', async (request, response, next) => {
   try {
-    const address = await prisma.address.findUnique({
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
+    const address = await prisma.address.findFirst({
       where: {
+        customerId: customer.id,
         id: request.params.id,
       },
     });
@@ -62,6 +79,12 @@ addressesRouter.get('/:id', async (request, response, next) => {
 
 addressesRouter.post('/', async (request, response, next) => {
   try {
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
     const parsed = addressSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -72,12 +95,21 @@ addressesRouter.post('/', async (request, response, next) => {
       return;
     }
 
-    const shouldBeDefault = parsed.data.isDefault || (await prisma.address.count()) === 0;
+    const shouldBeDefault =
+      parsed.data.isDefault ||
+      (await prisma.address.count({
+        where: {
+          customerId: customer.id,
+        },
+      })) === 0;
 
     if (shouldBeDefault) {
       await prisma.address.updateMany({
         data: {
           isDefault: false,
+        },
+        where: {
+          customerId: customer.id,
         },
       });
     }
@@ -85,6 +117,7 @@ addressesRouter.post('/', async (request, response, next) => {
     const address = await prisma.address.create({
       data: {
         ...parsed.data,
+        customerId: customer.id,
         isDefault: shouldBeDefault,
       },
     });
@@ -97,6 +130,12 @@ addressesRouter.post('/', async (request, response, next) => {
 
 addressesRouter.put('/:id', async (request, response, next) => {
   try {
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
     const parsed = addressSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -107,8 +146,9 @@ addressesRouter.put('/:id', async (request, response, next) => {
       return;
     }
 
-    const existingAddress = await prisma.address.findUnique({
+    const existingAddress = await prisma.address.findFirst({
       where: {
+        customerId: customer.id,
         id: request.params.id,
       },
     });
@@ -124,6 +164,9 @@ addressesRouter.put('/:id', async (request, response, next) => {
       await prisma.address.updateMany({
         data: {
           isDefault: false,
+        },
+        where: {
+          customerId: customer.id,
         },
       });
     }

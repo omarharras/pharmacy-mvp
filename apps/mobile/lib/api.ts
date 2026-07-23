@@ -1,6 +1,7 @@
 const fallbackApiUrl = 'http://localhost:4000';
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? fallbackApiUrl;
+const fallbackProductImageUrl = '/images/brands/elkhabiry-logo.png';
 
 type ApiResponse<T> = {
   data: T;
@@ -372,20 +373,20 @@ export function getBrands() {
   return getJson<Brand[]>('/brands');
 }
 
-export function getAddresses() {
-  return getJson<Address[]>('/addresses');
+export function getAddresses(token: string) {
+  return getAuthorizedJson<Address[]>('/addresses', token);
 }
 
-export function getAddress(addressId: string) {
-  return getJson<Address>(`/addresses/${addressId}`);
+export function getAddress(addressId: string, token: string) {
+  return getAuthorizedJson<Address>(`/addresses/${addressId}`, token);
 }
 
-export function createAddress(input: AddressInput) {
-  return postJson<Address>('/addresses', input);
+export function createAddress(input: AddressInput, token: string) {
+  return postAuthorizedJson<Address>('/addresses', input, token);
 }
 
-export function updateAddress(addressId: string, input: AddressInput) {
-  return putJson<Address>(`/addresses/${addressId}`, input);
+export function updateAddress(addressId: string, input: AddressInput, token: string) {
+  return putAuthorizedJson<Address>(`/addresses/${addressId}`, input, token);
 }
 
 export function getBranches() {
@@ -494,16 +495,16 @@ export function deleteInsuranceProfile(profileId: string, token: string) {
   return deleteAuthorizedJson<{ deleted: boolean }>(`/insurance-profiles/${profileId}`, token);
 }
 
-export function createOrder(input: CreateOrderInput) {
-  return postJson<Order>('/orders', input);
+export function createOrder(input: CreateOrderInput, token: string) {
+  return postAuthorizedJson<Order>('/orders', input, token);
 }
 
-export function getOrders() {
-  return getJson<Order[]>('/orders');
+export function getOrders(token: string) {
+  return getAuthorizedJson<Order[]>('/orders', token);
 }
 
-export function getOrder(orderId: string) {
-  return getJson<Order>(`/orders/${orderId}`);
+export function getOrder(orderId: string, token: string) {
+  return getAuthorizedJson<Order>(`/orders/${orderId}`, token);
 }
 
 export function resolveImageUrl(imageUrl: string | null | undefined) {
@@ -516,4 +517,12 @@ export function resolveImageUrl(imageUrl: string | null | undefined) {
   }
 
   return `${apiUrl}${imageUrl}`;
+}
+
+export function resolveProductImageUrl(imageUrl: string | null | undefined) {
+  const productImageUrl = imageUrl?.startsWith('/images/categories/')
+    ? fallbackProductImageUrl
+    : imageUrl ?? fallbackProductImageUrl;
+
+  return resolveImageUrl(productImageUrl);
 }

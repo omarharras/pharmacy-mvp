@@ -4,9 +4,11 @@ import { Link } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
 import { Order, getOrders } from '@/lib/api';
 import { formatPiasters } from '@/lib/request-context';
+import { useSession } from '@/lib/session-context';
 
 const statusCopy: Record<Order['status'], string> = {
   PENDING_REVIEW: 'Pending review',
@@ -31,12 +33,22 @@ const prescriptionStatusSteps: Order['status'][] = [
 ];
 
 export default function OrdersScreen() {
+  const { isLoggedIn, isRestoringSession, token } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadOrders = useCallback(async (refreshing = false) => {
+    if (!isLoggedIn || !token) {
+      setOrders([]);
+      setIsLoading(false);
+      setIsRefreshing(false);
+      setErrorMessage(null);
+      return;
+    }
+
     if (refreshing) {
       setIsRefreshing(true);
     } else {
@@ -45,19 +57,23 @@ export default function OrdersScreen() {
     setErrorMessage(null);
 
     try {
-      setOrders(await getOrders());
+      setOrders(await getOrders(token));
     } catch {
       setErrorMessage('Unable to load orders. Check that the API is running.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [isLoggedIn, token]);
 
   useFocusEffect(
     useCallback(() => {
+      if (!isRestoringSession && !isLoggedIn) {
+        setShowAuthPrompt(true);
+      }
+
       void loadOrders();
-    }, [loadOrders]),
+    }, [isLoggedIn, isRestoringSession, loadOrders]),
   );
 
   return (
@@ -78,11 +94,21 @@ export default function OrdersScreen() {
     >
       <Text style={styles.pageTitle}>Orders</Text>
 
-      {isLoading && !isRefreshing ? (
+      {!isLoggedIn && !isRestoringSession ? (
+        <View style={styles.stateBox}>
+          <Text style={styles.stateTitle}>Sign in to view orders</Text>
+          <Text style={styles.stateText}>Your product orders and prescription requests will appear here after sign in.</Text>
+          <Pressable style={styles.signInButton} onPress={() => setShowAuthPrompt(true)}>
+            <Text style={styles.signInButtonText}>Sign in</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {(isRestoringSession || isLoading) && !isRefreshing && isLoggedIn ? (
         <LoadingState />
       ) : null}
 
-      {errorMessage ? (
+      {isLoggedIn && errorMessage ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorTitle}>Could not connect</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
@@ -97,14 +123,14 @@ export default function OrdersScreen() {
         </View>
       ) : null}
 
-      {!isLoading && !errorMessage && orders.length === 0 ? (
+      {isLoggedIn && !isLoading && !errorMessage && orders.length === 0 ? (
         <View style={styles.stateBox}>
           <Text style={styles.stateTitle}>No orders yet</Text>
           <Text style={styles.stateText}>Your product orders and prescription requests will appear here.</Text>
         </View>
       ) : null}
 
-      {orders.map((order) => {
+      {isLoggedIn ? orders.map((order) => {
         const isPrescription = order.type === 'PRESCRIPTION_REQUEST';
         const totalPiasters = order.items.reduce(
           (total, item) => total + item.pricePiasters * item.quantity,
@@ -162,7 +188,13 @@ export default function OrdersScreen() {
           </Pressable>
           </Link>
         );
-      })}
+      }) : null}
+
+      <AuthRequiredModal
+        returnTo="/(tabs)/orders"
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+      />
     </ScrollView>
   );
 }
@@ -303,6 +335,21 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  signInButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#00b6bd',
+    borderRadius: 10,
+    height: 42,
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingHorizontal: 16,
+  },
+  signInButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '800',
   },
   orderCard: {

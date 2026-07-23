@@ -5,7 +5,7 @@ import { Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, 
 
 import { LoadingState } from '@/components/loading-state';
 import { QuantityControl } from '@/components/quantity-control';
-import { Product, ProductUnit, getProduct, resolveImageUrl } from '@/lib/api';
+import { Product, ProductUnit, getProduct, resolveProductImageUrl } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
 
 export default function ProductDetailScreen() {
@@ -94,17 +94,11 @@ export default function ProductDetailScreen() {
         {product ? (
           <>
             <View style={styles.mediaPanel}>
-              {resolveImageUrl(product.imageUrl) ? (
-                <Image
-                  source={{ uri: resolveImageUrl(product.imageUrl) ?? undefined }}
-                  resizeMode="contain"
-                  style={styles.productPhoto}
-                />
-              ) : (
-                <View style={styles.productImageFallback}>
-                  <Ionicons name="medkit-outline" size={42} color="#00b6bd" />
-                </View>
-              )}
+              <Image
+                source={{ uri: resolveProductImageUrl(product.imageUrl) ?? undefined }}
+                resizeMode="contain"
+                style={styles.productPhoto}
+              />
             </View>
 
             <View style={styles.productHeader}>
@@ -289,14 +283,6 @@ const styles = StyleSheet.create({
   productPhoto: {
     height: '86%',
     width: '86%',
-  },
-  productImageFallback: {
-    alignItems: 'center',
-    backgroundColor: '#E6F8F7',
-    borderRadius: 32,
-    height: 112,
-    justifyContent: 'center',
-    width: 112,
   },
   productHeader: {
     backgroundColor: '#FFFFFF',

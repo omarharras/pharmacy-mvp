@@ -3,7 +3,7 @@ import { Link, useRouter } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { QuantityControl } from '@/components/quantity-control';
-import { resolveImageUrl } from '@/lib/api';
+import { resolveProductImageUrl } from '@/lib/api';
 import { formatPiasters, useRequest } from '@/lib/request-context';
 
 export default function CartScreen() {
@@ -41,27 +41,16 @@ export default function CartScreen() {
           >
             <Text style={styles.pageTitle}>Cart</Text>
 
-            <View style={styles.itemsHeader}>
-              <Text style={styles.itemsTitle}>Items</Text>
-              <Pressable onPress={() => router.push('/categories')}>
-                <Text style={styles.addMoreText}>Add more</Text>
-              </Pressable>
-            </View>
-
             {items.map((item) => {
               return (
                 <View key={`${item.product.id}-${item.unit.id}`} style={styles.itemCard}>
                   <View style={styles.itemTopRow}>
                     <View style={styles.itemImage}>
-                      {resolveImageUrl(item.product.imageUrl) ? (
-                        <Image
-                          source={{ uri: resolveImageUrl(item.product.imageUrl) ?? undefined }}
-                          resizeMode="contain"
-                          style={styles.itemPhoto}
-                        />
-                      ) : (
-                        <Text style={styles.itemImageText}>Product</Text>
-                      )}
+                      <Image
+                        source={{ uri: resolveProductImageUrl(item.product.imageUrl) ?? undefined }}
+                        resizeMode="contain"
+                        style={styles.itemPhoto}
+                      />
                     </View>
 
                     <View style={styles.itemDetails}>
@@ -94,19 +83,26 @@ export default function CartScreen() {
                 </View>
               );
             })}
+
+            <Pressable style={styles.continueButton} onPress={() => router.push('/categories')}>
+              <Ionicons name="bag-outline" size={18} color="#00b6bd" />
+              <Text style={styles.continueButtonText}>Continue shopping</Text>
+            </Pressable>
           </ScrollView>
 
           <View style={styles.checkoutBar}>
-            <View>
-              <Text style={styles.checkoutLabel}>Total</Text>
-              <Text style={styles.checkoutValue}>{formatPiasters(totalPiasters)}</Text>
+            <View style={styles.checkoutTopRow}>
+              <View>
+                <Text style={styles.checkoutLabel}>Total</Text>
+                <Text style={styles.checkoutValue}>{formatPiasters(totalPiasters)}</Text>
+              </View>
+              <Link href="/checkout" asChild>
+                <Pressable style={styles.checkoutButton}>
+                  <Ionicons name="card-outline" size={19} color="#FFFFFF" />
+                  <Text style={styles.checkoutButtonText}>Checkout</Text>
+                </Pressable>
+              </Link>
             </View>
-            <Link href="/checkout" asChild>
-              <Pressable style={styles.checkoutButton}>
-                <Ionicons name="card-outline" size={19} color="#FFFFFF" />
-                <Text style={styles.checkoutButtonText}>Checkout</Text>
-              </Pressable>
-            </Link>
           </View>
         </>
       )}
@@ -122,7 +118,7 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 18,
     paddingHorizontal: 20,
-    paddingBottom: 18,
+    paddingBottom: 24,
   },
   pageTitle: {
     color: '#111827',
@@ -160,22 +156,6 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     textAlign: 'center',
   },
-  itemsHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  itemsTitle: {
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  addMoreText: {
-    color: '#00b6bd',
-    fontSize: 13,
-    fontWeight: '800',
-  },
   itemCard: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E5E7EB',
@@ -195,10 +175,6 @@ const styles = StyleSheet.create({
     height: 68,
     justifyContent: 'center',
     width: 68,
-  },
-  itemImageText: {
-    color: '#9CA3AF',
-    fontSize: 12,
   },
   itemPhoto: {
     borderRadius: 12,
@@ -244,15 +220,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   checkoutBar: {
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderTopColor: '#E5E7EB',
     borderTopWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingBottom: 18,
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 18,
+  },
+  checkoutTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   checkoutLabel: {
     color: '#6B7280',
@@ -277,6 +255,22 @@ const styles = StyleSheet.create({
   },
   checkoutButtonText: {
     color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  continueButton: {
+    alignItems: 'center',
+    backgroundColor: '#E6F8F7',
+    borderColor: '#BCEDEA',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 7,
+    height: 44,
+    justifyContent: 'center',
+  },
+  continueButtonText: {
+    color: '#00b6bd',
     fontSize: 15,
     fontWeight: '800',
   },

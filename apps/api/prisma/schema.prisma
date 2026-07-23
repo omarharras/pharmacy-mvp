@@ -56,7 +56,9 @@ model Customer {
   phone        String   @unique
   passwordHash String
   sessionToken String?  @unique
+  addresses    Address[]
   insuranceProfiles InsuranceProfile[]
+  orders       Order[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -151,6 +153,7 @@ model PrescriptionUpload {
 
 model Address {
   id              String   @id @default(cuid())
+  customerId      String?
   addressName     String
   fullName        String
   phone           String
@@ -163,6 +166,7 @@ model Address {
   apartment       String?
   landmark        String?
   isDefault       Boolean  @default(false)
+  customer        Customer? @relation(fields: [customerId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -184,6 +188,7 @@ model Branch {
 
 model Order {
   id                  String               @id @default(cuid())
+  customerId          String?
   type                OrderType            @default(PRODUCT_ORDER)
   customerName        String
   customerPhone       String
@@ -197,6 +202,7 @@ model Order {
   deliveryFeePiasters Int                  @default(0)
   notes               String?
   status              OrderStatus          @default(RECEIVED)
+  customer            Customer?            @relation(fields: [customerId], references: [id])
   items               OrderItem[]
   prescriptions       PrescriptionUpload[]
   createdAt           DateTime             @default(now())

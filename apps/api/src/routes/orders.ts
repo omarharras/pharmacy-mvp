@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
+import { requireCustomer } from '../lib/auth';
 import { prisma } from '../lib/prisma';
 
 const createOrderSchema = z
@@ -50,8 +51,14 @@ const createOrderSchema = z
 
 export const ordersRouter = Router();
 
-ordersRouter.get('/', async (_request, response, next) => {
+ordersRouter.get('/', async (request, response, next) => {
   try {
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
     const orders = await prisma.order.findMany({
       include: {
         items: {
@@ -69,6 +76,9 @@ ordersRouter.get('/', async (_request, response, next) => {
       orderBy: {
         createdAt: 'desc',
       },
+      where: {
+        customerId: customer.id,
+      },
     });
 
     response.json({ data: orders });
@@ -79,8 +89,15 @@ ordersRouter.get('/', async (_request, response, next) => {
 
 ordersRouter.get('/:id', async (request, response, next) => {
   try {
-    const order = await prisma.order.findUnique({
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
+    const order = await prisma.order.findFirst({
       where: {
+        customerId: customer.id,
         id: request.params.id,
       },
       include: {
@@ -113,6 +130,12 @@ ordersRouter.get('/:id', async (request, response, next) => {
 
 ordersRouter.post('/', async (request, response, next) => {
   try {
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
     const parsed = createOrderSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -182,9 +205,10 @@ ordersRouter.post('/', async (request, response, next) => {
 
     const order = await prisma.order.create({
       data: {
+        customerId: customer.id,
         type: parsed.data.type,
-        customerName: parsed.data.customer.name,
-        customerPhone: parsed.data.customer.phone,
+        customerName: customer.fullName,
+        customerPhone: customer.phone,
         address: parsed.data.customer.address,
         fulfillmentMethod: parsed.data.checkout.fulfillmentMethod,
         deliveryDate: parsed.data.checkout.deliveryDate,

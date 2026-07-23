@@ -4,9 +4,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
 import { Address, AddressInput, getAddresses, updateAddress } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
+import { useSession } from '@/lib/session-context';
 
 const colors = {
   brand: '#00b6bd',
@@ -21,15 +23,28 @@ const colors = {
 
 export default function AddressesScreen() {
   const { checkoutAddress, setCheckoutAddress } = useRequest();
+  const { isRestoringSession, token } = useSession();
   const checkoutAddressRef = useRef(checkoutAddress);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingDefaultId, setUpdatingDefaultId] = useState<string | null>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   checkoutAddressRef.current = checkoutAddress;
 
   const loadAddresses = useCallback(async (refreshing = false) => {
+    if (!token) {
+      if (!isRestoringSession) {
+        setShowAuthPrompt(true);
+        setAddresses([]);
+        setIsLoading(false);
+        setIsRefreshing(false);
+        setErrorMessage(null);
+      }
+      return;
+    }
+
     if (refreshing) {
       setIsRefreshing(true);
     } else {
@@ -38,7 +53,7 @@ export default function AddressesScreen() {
     setErrorMessage(null);
 
     try {
-      const savedAddresses = await getAddresses();
+      const savedAddresses = await getAddresses(token);
       setAddresses(savedAddresses);
 
       const defaultAddress = savedAddresses.find((address) => address.isDefault) ?? savedAddresses[0];
@@ -51,7 +66,7 @@ export default function AddressesScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [setCheckoutAddress]);
+  }, [isRestoringSession, setCheckoutAddress, token]);
 
   useFocusEffect(
     useCallback(() => {
@@ -60,11 +75,16 @@ export default function AddressesScreen() {
   );
 
   const setDefaultAddress = async (address: Address) => {
+    if (!token) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     setUpdatingDefaultId(address.id);
     setErrorMessage(null);
 
     try {
-      const updatedAddress = await updateAddress(address.id, toAddressInput(address, true));
+      const updatedAddress = await updateAddress(address.id, toAddressInput(address, true), token);
       setAddresses((currentAddresses) =>
         currentAddresses.map((currentAddress) => ({
           ...currentAddress,
@@ -177,6 +197,11 @@ export default function AddressesScreen() {
           <Text style={styles.addButtonText}>Add address</Text>
         </Pressable>
       </Link>
+      <AuthRequiredModal
+        returnTo="/addresses"
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+      />
     </ScrollView>
   );
 }

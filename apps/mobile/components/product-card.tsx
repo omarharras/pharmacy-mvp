@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Product, resolveImageUrl } from '@/lib/api';
+import { Product, resolveProductImageUrl } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
 
 import { QuantityControl } from './quantity-control';
@@ -38,15 +38,11 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
       >
         <Pressable style={styles.productLink}>
           <View style={styles.productImage}>
-            {resolveImageUrl(product.imageUrl) ? (
-              <Image
-                source={{ uri: resolveImageUrl(product.imageUrl) ?? undefined }}
-                resizeMode="contain"
-                style={styles.productPhoto}
-              />
-            ) : (
-              <Text style={styles.productImageText}>Product</Text>
-            )}
+            <Image
+              source={{ uri: resolveProductImageUrl(product.imageUrl) ?? undefined }}
+              resizeMode="contain"
+              style={styles.productPhoto}
+            />
           </View>
 
           <Text style={styles.productName} numberOfLines={2}>
@@ -110,10 +106,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
     width: '100%',
-  },
-  productImageText: {
-    color: colors.muted,
-    fontSize: 12,
   },
   productPhoto: {
     borderRadius: 12,

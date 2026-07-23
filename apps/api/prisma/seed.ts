@@ -140,18 +140,24 @@ const productImagesBySlug: Record<string, string> = {
   'accu-chek-active-glucose-meter': '/images/products/accu-chek-active-glucose-meter.png',
   'bioderma-sensibio-h2o': '/images/products/bioderma-sensibio-h2o.png',
   'brufen-400-mg': '/images/products/brufen-400-mg.png',
+  'blood-pressure-monitor': '/images/products/blood-pressure-monitor.jpg',
   'centrum-advance': '/images/products/centrum-advance.png',
   'cerave-moisturizing-cream': '/images/products/cerave-moisturizing-cream.png',
   congestal: '/images/products/congestal.png',
   'dettol-antiseptic-liquid': '/images/products/dettol-antiseptic-liquid.png',
+  'eva-b-white-day-cream': '/images/products/eva-b-white-day-cream.jpg',
+  'gillette-mach3-razors': '/images/products/gillette-mach3-razors.jpg',
   'johnson-baby-shampoo': '/images/products/johnson-baby-shampoo.png',
   'la-roche-posay-anthelios-spf-50': '/images/products/la-roche-posay-anthelios-spf-50.png',
+  'nivea-men-deodorant': '/images/products/nivea-men-deodorant.jpg',
   'otrivin-nasal-spray': '/images/products/otrivin-nasal-spray.png',
   'pampers-premium-care': '/images/products/pampers-premium-care.png',
   'panadol-extra': '/images/products/panadol-extra.png',
   'sensodyne-repair-protect': '/images/products/sensodyne-repair-protect.png',
   'strepsils-honey-lemon': '/images/products/strepsils-honey-lemon.png',
   sudocrem: '/images/products/sudocrem.png',
+  'the-ordinary-niacinamide-10': '/images/products/the-ordinary-niacinamide-10.jpg',
+  'vitamin-c-1000-mg': '/images/products/vitamin-c-1000-mg.png',
 };
 
 const subcategoryImagesBySlug: Record<string, string> = {
@@ -614,10 +620,10 @@ const products = [
   {
     categorySlug: 'vitamins',
     brandSlug: 'health-essentials',
-    name: 'Vitamin C 1000 mg',
+    name: "Puritan's Pride C-1000 mg",
     slug: 'vitamin-c-1000-mg',
-    description: 'Effervescent vitamin C tablets for daily antioxidant and immune support. Dissolve one tablet in water according to the pack directions.',
-    packageSize: '20 tablets',
+    description: 'Vitamin C caplets with bioflavonoids and wild rose hips for daily antioxidant and immune support. Use according to the pack directions.',
+    packageSize: '100 coated caplets',
     pricePiasters: 8900,
     isPopular: true,
   },
@@ -914,10 +920,10 @@ const products = [
   {
     categorySlug: 'men-care',
     brandSlug: 'nivea',
-    name: 'Nivea Men Deodorant',
+    name: 'Nivea Men Dry Impact Roll-On',
     slug: 'nivea-men-deodorant',
-    description: 'Daily deodorant spray for long-lasting freshness and odor protection. Apply to clean, dry underarms and allow to dry before dressing.',
-    packageSize: '150 ml',
+    description: 'Roll-on anti-perspirant for long-lasting freshness and odor protection. Apply to clean, dry underarms and allow to dry before dressing.',
+    packageSize: '50 ml',
     pricePiasters: 11800,
     isPopular: false,
   },
@@ -1183,7 +1189,7 @@ async function main() {
       : null;
 
     const { categorySlug: _categorySlug, brandSlug: _brandSlug, ...productData } = product;
-    const imageUrl = productImagesBySlug[product.slug] ?? productImagesByCategorySlug[product.categorySlug];
+    const imageUrl = productImagesBySlug[product.slug] ?? '/images/brands/elkhabiry-logo.png';
 
     const savedProduct = await prisma.product.upsert({
       where: { slug: product.slug },

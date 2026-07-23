@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 
 import { LoadingState } from '@/components/loading-state';
-import { Product, getProducts, resolveImageUrl } from '@/lib/api';
+import { Product, getProducts, resolveProductImageUrl } from '@/lib/api';
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ query?: string }>();
@@ -136,15 +136,11 @@ export default function SearchScreen() {
             >
               <Pressable style={styles.productRow}>
                 <View style={styles.productImage}>
-                  {resolveImageUrl(product.imageUrl) ? (
-                    <Image
-                      source={{ uri: resolveImageUrl(product.imageUrl) ?? undefined }}
-                      resizeMode="contain"
-                      style={styles.productPhoto}
-                    />
-                  ) : (
-                    <Text style={styles.productImageText}>Product</Text>
-                  )}
+                  <Image
+                    source={{ uri: resolveProductImageUrl(product.imageUrl) ?? undefined }}
+                    resizeMode="contain"
+                    style={styles.productPhoto}
+                  />
                 </View>
 
                 <Text style={styles.productName} numberOfLines={2}>
@@ -210,10 +206,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
     width: 48,
-  },
-  productImageText: {
-    color: '#9CA3AF',
-    fontSize: 9,
   },
   productPhoto: {
     borderRadius: 10,

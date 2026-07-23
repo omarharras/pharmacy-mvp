@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { InsuranceProfile, resolveImageUrl, uploadInsuranceImage } from '@/lib/api';
 import {
   insuranceStatusCopy,
@@ -29,7 +30,7 @@ type NationalIdSide = 'nationalIdFront' | 'nationalIdBack';
 
 export default function InsuranceScreen() {
   const params = useLocalSearchParams<{ provider?: string }>();
-  const { token } = useSession();
+  const { isRestoringSession, token } = useSession();
   const {
     isLoadingProfiles,
     profiles,
@@ -38,8 +39,9 @@ export default function InsuranceScreen() {
     setUseInsuranceByDefault,
   } = useInsurance();
   const initialProviderName = typeof params.provider === 'string' ? params.provider : '';
-  const [isAddingCard, setIsAddingCard] = useState(Boolean(initialProviderName));
+  const [isAddingCard, setIsAddingCard] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [providerName, setProviderName] = useState(initialProviderName);
   const [cardholderName, setCardholderName] = useState('');
   const [memberNumber, setMemberNumber] = useState('');
@@ -55,6 +57,20 @@ export default function InsuranceScreen() {
     memberNumber.trim().length >= 3;
   const canSave = hasRequiredDetails;
 
+  useEffect(() => {
+    if (!initialProviderName || isRestoringSession) {
+      return;
+    }
+
+    if (!token) {
+      setShowAuthPrompt(true);
+      setIsAddingCard(false);
+      return;
+    }
+
+    setIsAddingCard(true);
+  }, [initialProviderName, isRestoringSession, token]);
+
   const resetForm = () => {
     setProviderName('');
     setCardholderName('');
@@ -67,6 +83,11 @@ export default function InsuranceScreen() {
   };
 
   const openAddCard = () => {
+    if (!token) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     resetForm();
     setIsAddingCard(true);
   };
@@ -107,7 +128,7 @@ export default function InsuranceScreen() {
 
   const save = async () => {
     if (!token) {
-      Alert.alert('Sign in required', 'Sign in before adding an insurance card.');
+      setShowAuthPrompt(true);
       return;
     }
 
@@ -296,6 +317,12 @@ export default function InsuranceScreen() {
         )}
 
       </ScrollView>
+
+      <AuthRequiredModal
+        returnTo={initialProviderName ? `/insurance?provider=${encodeURIComponent(initialProviderName)}` : '/insurance'}
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+      />
 
       <Modal
         animationType="fade"
