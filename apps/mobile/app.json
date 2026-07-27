@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "pharmacy-mvp",
+    "owner": "elkhabiry-pharmacy-mvp",
     "slug": "pharmacy-mvp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -112,6 +113,12 @@
       "eas": {
         "projectId": "7474dca5-370d-4dcf-967e-97f70ff8ade4"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7474dca5-370d-4dcf-967e-97f70ff8ade4"
     }
   }
 }
