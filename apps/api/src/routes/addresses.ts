@@ -183,3 +183,63 @@ addressesRouter.put('/:id', async (request, response, next) => {
     next(error);
   }
 });
+
+addressesRouter.delete('/:id', async (request, response, next) => {
+  try {
+    const customer = await requireCustomer(request, response);
+
+    if (!customer) {
+      return;
+    }
+
+    const existingAddress = await prisma.address.findFirst({
+      where: {
+        customerId: customer.id,
+        id: request.params.id,
+      },
+    });
+
+    if (!existingAddress) {
+      response.status(404).json({
+        error: 'Address not found',
+      });
+      return;
+    }
+
+    await prisma.address.delete({
+      where: {
+        id: request.params.id,
+      },
+    });
+
+    if (existingAddress.isDefault) {
+      const nextDefaultAddress = await prisma.address.findFirst({
+        orderBy: {
+          updatedAt: 'desc',
+        },
+        where: {
+          customerId: customer.id,
+        },
+      });
+
+      if (nextDefaultAddress) {
+        await prisma.address.update({
+          data: {
+            isDefault: true,
+          },
+          where: {
+            id: nextDefaultAddress.id,
+          },
+        });
+      }
+    }
+
+    response.json({
+      data: {
+        deleted: true,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});

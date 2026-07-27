@@ -20,13 +20,13 @@ type RequestContextValue = {
   prescriptions: RequestPrescription[];
   checkoutAddress: CheckoutAddress | null;
   totalPiasters: number;
-  addProduct: (product: Product, unit?: ProductUnit) => void;
+  addProduct: (product: Product, unit?: ProductUnit, quantity?: number) => void;
   addPrescription: (prescription: RequestPrescription) => void;
   decrementProduct: (productId: string, productUnitId?: string) => void;
   getProductQuantity: (productId: string, productUnitId?: string) => number;
   removeProduct: (productId: string, productUnitId?: string) => void;
   removePrescription: (prescriptionId: string) => void;
-  setCheckoutAddress: (address: CheckoutAddress) => void;
+  setCheckoutAddress: (address: CheckoutAddress | null) => void;
   clearProducts: () => void;
   clearPrescriptions: () => void;
   clearRequest: () => void;
@@ -56,7 +56,7 @@ export function RequestProvider({ children }: RequestProviderProps) {
       prescriptions,
       checkoutAddress,
       totalPiasters,
-      addProduct: (product, unit) => {
+      addProduct: (product, unit, quantity = 1) => {
         setItems((currentItems) => {
           const selectedUnit = unit ?? getDefaultProductUnit(product);
           const existingItem = currentItems.find(
@@ -66,12 +66,12 @@ export function RequestProvider({ children }: RequestProviderProps) {
           if (existingItem) {
             return currentItems.map((item) =>
               item.product.id === product.id && item.unit.id === selectedUnit.id
-                ? { ...item, quantity: item.quantity + 1 }
+                ? { ...item, quantity: item.quantity + quantity }
                 : item,
             );
           }
 
-          return [...currentItems, { product, quantity: 1, unit: selectedUnit }];
+          return [...currentItems, { product, quantity, unit: selectedUnit }];
         });
       },
       addPrescription: (prescription) => {

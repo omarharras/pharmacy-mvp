@@ -45,7 +45,7 @@ export default function MoreScreen() {
           </Text>
         </View>
         {isRestoringSession ? null : isLoggedIn ? (
-          <Pressable style={styles.signInButton}>
+          <Pressable style={styles.signInButton} onPress={() => router.push('/profile')}>
             <Text style={styles.signInText}>Edit</Text>
           </Pressable>
         ) : (
@@ -69,6 +69,9 @@ export default function MoreScreen() {
           </Link>
           <Link href="/(tabs)/orders" asChild>
             <MenuRow icon="receipt-outline" label="Order history" />
+          </Link>
+          <Link href="/favorites" asChild>
+            <MenuRow icon="heart-outline" label="Favorite products" />
           </Link>
           <MenuRow icon="notifications-outline" label="Notifications" />
         </MenuSection>

@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
-import { Order, getOrder, resolveProductImageUrl } from '@/lib/api';
-import { formatPiasters } from '@/lib/request-context';
+import { Order, Product, ProductUnit, getOrder, resolveProductImageUrl } from '@/lib/api';
+import { formatPiasters, useRequest } from '@/lib/request-context';
 import { useSession } from '@/lib/session-context';
 
 const colors = {
@@ -32,8 +32,10 @@ const productSteps: Order['status'][] = ['RECEIVED', 'PREPARING', 'OUT_FOR_DELIV
 const prescriptionSteps: Order['status'][] = ['PENDING_REVIEW', 'RECEIVED', 'PREPARING', 'DELIVERED'];
 
 export default function OrderDetailsScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const orderId = typeof params.id === 'string' ? params.id : '';
+  const { addProduct } = useRequest();
   const { isRestoringSession, token } = useSession();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +88,19 @@ export default function OrderDetailsScreen() {
   ) ?? 0;
   const orderTotal = order ? itemsTotal + order.deliveryFeePiasters : 0;
   const isPrescription = order?.type === 'PRESCRIPTION_REQUEST';
+
+  const reorder = () => {
+    if (!order || order.type !== 'PRODUCT_ORDER') {
+      return;
+    }
+
+    for (const item of order.items) {
+      const { product, unit } = getReorderProductAndUnit(item);
+      addProduct(product, unit, item.quantity);
+    }
+
+    router.push('/cart');
+  };
 
   return (
     <ScrollView
@@ -169,6 +184,10 @@ export default function OrderDetailsScreen() {
                   <Text style={styles.itemPrice}>{formatPiasters(item.pricePiasters)}</Text>
                 </View>
               ))}
+              <Pressable style={styles.reorderButton} onPress={reorder}>
+                <Ionicons name="repeat-outline" size={18} color={colors.white} />
+                <Text style={styles.reorderButtonText}>Reorder these items</Text>
+              </Pressable>
             </Section>
           )}
 
@@ -200,6 +219,46 @@ export default function OrderDetailsScreen() {
       />
     </ScrollView>
   );
+}
+
+function getReorderProductAndUnit(item: Order['items'][number]): { product: Product; unit: ProductUnit } {
+  const productUnits = item.product.units.map((unit) => ({
+    ...unit,
+    price: unit.price ?? toPriceObject(unit.pricePiasters),
+  }));
+  const productPrice = toPriceObject(item.product.pricePiasters);
+  const product = {
+    ...item.product,
+    price: item.product.price ?? productPrice,
+    units: productUnits,
+  };
+  const matchingUnit = productUnits.find((unit) => unit.id === item.productUnitId);
+  const fallbackUnit = productUnits.find((unit) => unit.isDefault) ?? productUnits[0];
+  const unit = matchingUnit ??
+    (item.productUnit
+      ? {
+          ...item.productUnit,
+          price: item.productUnit.price ?? toPriceObject(item.productUnit.pricePiasters),
+        }
+      : fallbackUnit) ??
+    {
+      id: item.product.id,
+      isDefault: true,
+      label: item.unitLabel ?? item.product.unitLabel ?? 'Piece',
+      price: productPrice,
+      pricePiasters: item.pricePiasters,
+      sortOrder: 1,
+    };
+
+  return { product, unit };
+}
+
+function toPriceObject(pricePiasters: number) {
+  return {
+    amount: pricePiasters / 100,
+    currency: 'EGP',
+    formatted: formatPiasters(pricePiasters),
+  };
 }
 
 function Section({ children, title }: { children: React.ReactNode; title: string }) {
@@ -498,6 +557,21 @@ const styles = StyleSheet.create({
   itemPrice: {
     color: colors.brand,
     fontSize: 14,
+    fontWeight: '800',
+  },
+  reorderButton: {
+    alignItems: 'center',
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    height: 48,
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  reorderButtonText: {
+    color: colors.white,
+    fontSize: 15,
     fontWeight: '800',
   },
   paymentRow: {

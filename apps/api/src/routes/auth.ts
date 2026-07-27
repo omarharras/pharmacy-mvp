@@ -18,6 +18,10 @@ const signupInputSchema = authInputSchema.extend({
   fullName: z.string().min(2),
 });
 
+const updateCustomerInputSchema = z.object({
+  fullName: z.string().min(2),
+});
+
 export const authRouter = Router();
 
 authRouter.post('/signup', async (request, response, next) => {
@@ -138,6 +142,55 @@ authRouter.get('/me', async (request, response, next) => {
 
     response.json({
       data: serializeCustomer(customer),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.put('/me', async (request, response, next) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+
+    if (!token) {
+      response.status(401).json({
+        error: 'Authentication required',
+      });
+      return;
+    }
+
+    const customer = await prisma.customer.findUnique({
+      where: {
+        sessionToken: token,
+      },
+    });
+
+    if (!customer) {
+      response.status(401).json({
+        error: 'Invalid session',
+      });
+      return;
+    }
+
+    const parsed = updateCustomerInputSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      response.status(400).json({
+        details: parsed.error.flatten(),
+        error: 'Invalid profile request',
+      });
+      return;
+    }
+
+    const updatedCustomer = await prisma.customer.update({
+      data: parsed.data,
+      where: {
+        id: customer.id,
+      },
+    });
+
+    response.json({
+      data: serializeCustomer(updatedCustomer),
     });
   } catch (error) {
     next(error);

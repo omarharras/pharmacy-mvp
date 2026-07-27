@@ -1,6 +1,13 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { Customer, getCurrentCustomer, signIn as signInRequest, signOut as signOutRequest, signUp as signUpRequest } from './api';
+import {
+  Customer,
+  getCurrentCustomer,
+  signIn as signInRequest,
+  signOut as signOutRequest,
+  signUp as signUpRequest,
+  updateCurrentCustomer,
+} from './api';
 import { clearStoredAuthToken, getStoredAuthToken, storeAuthToken } from './auth-storage';
 
 type SessionContextValue = {
@@ -11,6 +18,7 @@ type SessionContextValue = {
   signOut: () => Promise<void>;
   signUp: (input: { fullName: string; password: string; phone: string }) => Promise<void>;
   token: string | null;
+  updateProfile: (input: { fullName: string }) => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -90,6 +98,14 @@ export function SessionProvider({ children }: SessionProviderProps) {
         await storeAuthToken(session.token);
       },
       token,
+      updateProfile: async (input) => {
+        if (!token) {
+          throw new Error('Authentication required');
+        }
+
+        const updatedCustomer = await updateCurrentCustomer(input, token);
+        setCustomer(updatedCustomer);
+      },
     }),
     [customer, isRestoringSession, token],
   );

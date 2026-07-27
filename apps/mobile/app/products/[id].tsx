@@ -1,15 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingState } from '@/components/loading-state';
 import { QuantityControl } from '@/components/quantity-control';
 import { Product, ProductUnit, getProduct, resolveProductImageUrl } from '@/lib/api';
+import { useFavorites } from '@/lib/favorites-context';
 import { useRequest } from '@/lib/request-context';
+import { useSession } from '@/lib/session-context';
 
 export default function ProductDetailScreen() {
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { addProduct, decrementProduct, getProductQuantity } = useRequest();
+  const { isLoggedIn } = useSession();
   const params = useLocalSearchParams<{ id?: string }>();
   const productId = typeof params.id === 'string' ? params.id : '';
   const [product, setProduct] = useState<Product | null>(null);
@@ -53,6 +57,24 @@ export default function ProductDetailScreen() {
   const unitOptions = product ? getProductUnits(product) : [];
   const selectedUnit = unitOptions.find((unit) => unit.id === selectedUnitId) ?? unitOptions[0];
   const quantity = product && selectedUnit ? getProductQuantity(product.id, selectedUnit.id) : 0;
+  const favorited = product ? isFavorite(product.id) : false;
+
+  const onToggleFavorite = async () => {
+    if (!product) {
+      return;
+    }
+
+    if (!isLoggedIn) {
+      Alert.alert('Sign in required', 'Sign in to save favorite products.');
+      return;
+    }
+
+    try {
+      await toggleFavorite(product);
+    } catch {
+      Alert.alert('Could not update favorite', 'Check that the API is running.');
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -94,6 +116,18 @@ export default function ProductDetailScreen() {
         {product ? (
           <>
             <View style={styles.mediaPanel}>
+              <Pressable
+                accessibilityLabel={favorited ? 'Remove from favorites' : 'Add to favorites'}
+                hitSlop={8}
+                style={styles.favoriteButton}
+                onPress={onToggleFavorite}
+              >
+                <Ionicons
+                  name={favorited ? 'heart' : 'heart-outline'}
+                  size={22}
+                  color={favorited ? '#E11D48' : '#9CA3AF'}
+                />
+              </Pressable>
               <Image
                 source={{ uri: resolveProductImageUrl(product.imageUrl) ?? undefined }}
                 resizeMode="contain"
@@ -279,6 +313,21 @@ const styles = StyleSheet.create({
     height: 318,
     justifyContent: 'center',
     overflow: 'hidden',
+    position: 'relative',
+  },
+  favoriteButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 18,
+    top: 18,
+    width: 40,
+    zIndex: 2,
   },
   productPhoto: {
     height: '86%',

@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
-import { Order, getOrders } from '@/lib/api';
-import { formatPiasters } from '@/lib/request-context';
+import { Order, Product, ProductUnit, getOrders } from '@/lib/api';
+import { formatPiasters, useRequest } from '@/lib/request-context';
 import { useSession } from '@/lib/session-context';
 
 const statusCopy: Record<Order['status'], string> = {
@@ -33,6 +33,8 @@ const prescriptionStatusSteps: Order['status'][] = [
 ];
 
 export default function OrdersScreen() {
+  const router = useRouter();
+  const { addProduct } = useRequest();
   const { isLoggedIn, isRestoringSession, token } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +77,15 @@ export default function OrdersScreen() {
       void loadOrders();
     }, [isLoggedIn, isRestoringSession, loadOrders]),
   );
+
+  const reorder = (order: Order) => {
+    for (const item of order.items) {
+      const { product, unit } = getReorderProductAndUnit(item);
+      addProduct(product, unit, item.quantity);
+    }
+
+    router.push('/cart');
+  };
 
   return (
     <ScrollView
@@ -138,17 +149,18 @@ export default function OrdersScreen() {
         );
 
         return (
-          <Link
+          <Pressable
             key={order.id}
-            href={{
-              pathname: '/orders/[id]',
-              params: {
-                id: order.id,
-              },
+            style={styles.orderCard}
+            onPress={() => {
+              router.push({
+                pathname: '/orders/[id]',
+                params: {
+                  id: order.id,
+                },
+              });
             }}
-            asChild
           >
-          <Pressable style={styles.orderCard}>
             <View style={styles.orderTopRow}>
               <View>
                 <Text style={styles.orderRef}>Order #{order.id.slice(-8).toUpperCase()}</Text>
@@ -183,10 +195,21 @@ export default function OrdersScreen() {
                 The pharmacy will review the prescription and contact you with price and availability.
               </Text>
             ) : (
-              <Text style={styles.totalText}>{formatPiasters(totalPiasters)}</Text>
+              <View style={styles.orderBottomRow}>
+                <Text style={styles.totalText}>{formatPiasters(totalPiasters)}</Text>
+                <Pressable
+                  style={styles.reorderButton}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    reorder(order);
+                  }}
+                >
+                  <Ionicons name="repeat-outline" size={17} color="#00b6bd" />
+                  <Text style={styles.reorderButtonText}>Reorder</Text>
+                </Pressable>
+              </View>
             )}
           </Pressable>
-          </Link>
         );
       }) : null}
 
@@ -197,6 +220,46 @@ export default function OrdersScreen() {
       />
     </ScrollView>
   );
+}
+
+function getReorderProductAndUnit(item: Order['items'][number]): { product: Product; unit: ProductUnit } {
+  const productUnits = item.product.units.map((unit) => ({
+    ...unit,
+    price: unit.price ?? toPriceObject(unit.pricePiasters),
+  }));
+  const productPrice = toPriceObject(item.product.pricePiasters);
+  const product = {
+    ...item.product,
+    price: item.product.price ?? productPrice,
+    units: productUnits,
+  };
+  const matchingUnit = productUnits.find((unit) => unit.id === item.productUnitId);
+  const fallbackUnit = productUnits.find((unit) => unit.isDefault) ?? productUnits[0];
+  const unit = matchingUnit ??
+    (item.productUnit
+      ? {
+          ...item.productUnit,
+          price: item.productUnit.price ?? toPriceObject(item.productUnit.pricePiasters),
+        }
+      : fallbackUnit) ??
+    {
+      id: item.product.id,
+      isDefault: true,
+      label: item.unitLabel ?? item.product.unitLabel ?? 'Piece',
+      price: productPrice,
+      pricePiasters: item.pricePiasters,
+      sortOrder: 1,
+    };
+
+  return { product, unit };
+}
+
+function toPriceObject(pricePiasters: number) {
+  return {
+    amount: pricePiasters / 100,
+    currency: 'EGP',
+    formatted: formatPiasters(pricePiasters),
+  };
 }
 
 type OrderTimelineProps = {
@@ -446,6 +509,28 @@ const styles = StyleSheet.create({
   totalText: {
     color: '#00b6bd',
     fontSize: 17,
+    fontWeight: '800',
+  },
+  orderBottomRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  reorderButton: {
+    alignItems: 'center',
+    backgroundColor: '#E6F8F7',
+    borderColor: '#BCEDEA',
+    borderRadius: 11,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    height: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  reorderButtonText: {
+    color: '#00b6bd',
+    fontSize: 13,
     fontWeight: '800',
   },
 });

@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
-import { Address, AddressInput, getAddresses, updateAddress } from '@/lib/api';
+import { Address, AddressInput, deleteAddress, getAddresses, updateAddress } from '@/lib/api';
 import { useRequest } from '@/lib/request-context';
 import { useSession } from '@/lib/session-context';
 
@@ -28,6 +28,7 @@ export default function AddressesScreen() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
   const [updatingDefaultId, setUpdatingDefaultId] = useState<string | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -96,6 +97,50 @@ export default function AddressesScreen() {
       setErrorMessage('Unable to update default address. Check that the API is running.');
     } finally {
       setUpdatingDefaultId(null);
+    }
+  };
+
+  const confirmDeleteAddress = (address: Address) => {
+    Alert.alert(
+      'Delete address',
+      `Remove ${address.addressName} from your saved addresses?`,
+      [
+        {
+          style: 'cancel',
+          text: 'Cancel',
+        },
+        {
+          style: 'destructive',
+          text: 'Delete',
+          onPress: () => {
+            void removeAddress(address);
+          },
+        },
+      ],
+    );
+  };
+
+  const removeAddress = async (address: Address) => {
+    if (!token) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    setDeletingAddressId(address.id);
+    setErrorMessage(null);
+
+    try {
+      await deleteAddress(address.id, token);
+      const savedAddresses = await getAddresses(token);
+      setAddresses(savedAddresses);
+
+      if (checkoutAddressRef.current?.id === address.id) {
+        setCheckoutAddress(savedAddresses.find((savedAddress) => savedAddress.isDefault) ?? savedAddresses[0] ?? null);
+      }
+    } catch {
+      setErrorMessage('Unable to delete address. Check that the API is running.');
+    } finally {
+      setDeletingAddressId(null);
     }
   };
 
@@ -170,19 +215,29 @@ export default function AddressesScreen() {
                   </Text>
                 </Pressable>
               ) : null}
-              <Link
-                href={{
-                  pathname: '/address',
-                  params: {
-                    id: address.id,
-                  },
-                }}
-                asChild
-              >
-                <Pressable>
-                  <Text style={styles.editText}>Edit</Text>
+              <View style={styles.cardActions}>
+                <Link
+                  href={{
+                    pathname: '/address',
+                    params: {
+                      id: address.id,
+                    },
+                  }}
+                  asChild
+                >
+                  <Pressable>
+                    <Text style={styles.editText}>Edit</Text>
+                  </Pressable>
+                </Link>
+                <Pressable
+                  disabled={deletingAddressId === address.id}
+                  onPress={() => confirmDeleteAddress(address)}
+                >
+                  <Text style={styles.deleteText}>
+                    {deletingAddressId === address.id ? 'Deleting' : 'Delete'}
+                  </Text>
                 </Pressable>
-              </Link>
+              </View>
             </View>
 
             <Text style={styles.addressText}>{formatAddress(address)}</Text>
@@ -297,6 +352,16 @@ const styles = StyleSheet.create({
   },
   editText: {
     color: colors.brand,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  cardActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteText: {
+    color: '#9F1D1D',
     fontSize: 13,
     fontWeight: '800',
   },

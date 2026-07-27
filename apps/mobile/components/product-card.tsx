@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Product, resolveProductImageUrl } from '@/lib/api';
+import { useFavorites } from '@/lib/favorites-context';
 import { useRequest } from '@/lib/request-context';
+import { useSession } from '@/lib/session-context';
 
 import { QuantityControl } from './quantity-control';
 
@@ -21,12 +23,41 @@ const colors = {
 };
 
 export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { addProduct, decrementProduct, getProductQuantity } = useRequest();
+  const { isLoggedIn } = useSession();
   const defaultUnit = product.units.find((unit) => unit.isDefault) ?? product.units[0];
   const quantity = defaultUnit ? getProductQuantity(product.id, defaultUnit.id) : 0;
+  const favorited = isFavorite(product.id);
+
+  const onToggleFavorite = async () => {
+    if (!isLoggedIn) {
+      Alert.alert('Sign in required', 'Sign in to save favorite products.');
+      return;
+    }
+
+    try {
+      await toggleFavorite(product);
+    } catch {
+      Alert.alert('Could not update favorite', 'Check that the API is running.');
+    }
+  };
 
   return (
     <View style={variant === 'rail' ? styles.railCard : styles.gridCard}>
+      <Pressable
+        accessibilityLabel={favorited ? `Remove ${product.name} from favorites` : `Add ${product.name} to favorites`}
+        hitSlop={8}
+        style={styles.favoriteButton}
+        onPress={onToggleFavorite}
+      >
+        <Ionicons
+          name={favorited ? 'heart' : 'heart-outline'}
+          size={19}
+          color={favorited ? '#E11D48' : colors.muted}
+        />
+      </Pressable>
+
       <Link
         href={{
           pathname: '/products/[id]',
@@ -85,6 +116,7 @@ const styles = StyleSheet.create({
     minHeight: 204,
     padding: 10,
     width: '49%',
+    position: 'relative',
   },
   railCard: {
     backgroundColor: colors.white,
@@ -93,7 +125,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 204,
     padding: 10,
+    position: 'relative',
     width: 158,
+  },
+  favoriteButton: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 15,
+    borderWidth: 1,
+    height: 30,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 9,
+    top: 9,
+    width: 30,
+    zIndex: 2,
   },
   productLink: {
     flex: 1,

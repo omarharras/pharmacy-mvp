@@ -84,6 +84,13 @@ export type Product = {
   brand?: Brand | null;
 };
 
+export type FavoriteProduct = {
+  createdAt: string;
+  id: string;
+  product: Product;
+  productId: string;
+};
+
 export type ProductUnit = {
   id: string;
   label: string;
@@ -361,6 +368,10 @@ export function getCurrentCustomer(token: string) {
   return getAuthorizedJson<Customer>('/auth/me', token);
 }
 
+export function updateCurrentCustomer(input: { fullName: string }, token: string) {
+  return putAuthorizedJson<Customer>('/auth/me', input, token);
+}
+
 export function signOut(token: string) {
   return postAuthorizedJson<{ signedOut: boolean }>('/auth/signout', {}, token);
 }
@@ -387,6 +398,10 @@ export function createAddress(input: AddressInput, token: string) {
 
 export function updateAddress(addressId: string, input: AddressInput, token: string) {
   return putAuthorizedJson<Address>(`/addresses/${addressId}`, input, token);
+}
+
+export function deleteAddress(addressId: string, token: string) {
+  return deleteAuthorizedJson<{ deleted: boolean }>(`/addresses/${addressId}`, token);
 }
 
 export function getBranches() {
@@ -434,6 +449,18 @@ export function getFilteredProducts(params: GetProductsParams = {}) {
 
 export function getProduct(productId: string) {
   return getJson<Product>(`/products/${productId}`);
+}
+
+export function getFavorites(token: string) {
+  return getAuthorizedJson<FavoriteProduct[]>('/favorites', token);
+}
+
+export function addFavorite(productId: string, token: string) {
+  return postAuthorizedJson<unknown>(`/favorites/${productId}`, {}, token);
+}
+
+export function removeFavorite(productId: string, token: string) {
+  return deleteAuthorizedJson<{ deleted: boolean }>(`/favorites/${productId}`, token);
 }
 
 export function uploadPrescription(file: { name: string; type: string; uri: string }) {
