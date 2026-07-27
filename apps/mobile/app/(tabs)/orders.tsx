@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
 import { Order, Product, ProductUnit, getOrders } from '@/lib/api';
 import { formatPiasters, useRequest } from '@/lib/request-context';
@@ -39,7 +38,6 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadOrders = useCallback(async (refreshing = false) => {
@@ -70,12 +68,8 @@ export default function OrdersScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!isRestoringSession && !isLoggedIn) {
-        setShowAuthPrompt(true);
-      }
-
       void loadOrders();
-    }, [isLoggedIn, isRestoringSession, loadOrders]),
+    }, [loadOrders]),
   );
 
   const reorder = (order: Order) => {
@@ -104,16 +98,6 @@ export default function OrdersScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.pageTitle}>Orders</Text>
-
-      {!isLoggedIn && !isRestoringSession ? (
-        <View style={styles.stateBox}>
-          <Text style={styles.stateTitle}>Sign in to view orders</Text>
-          <Text style={styles.stateText}>Your product orders and prescription requests will appear here after sign in.</Text>
-          <Pressable style={styles.signInButton} onPress={() => setShowAuthPrompt(true)}>
-            <Text style={styles.signInButtonText}>Sign in</Text>
-          </Pressable>
-        </View>
-      ) : null}
 
       {(isRestoringSession || isLoading) && !isRefreshing && isLoggedIn ? (
         <LoadingState />
@@ -213,11 +197,6 @@ export default function OrdersScreen() {
         );
       }) : null}
 
-      <AuthRequiredModal
-        returnTo="/(tabs)/orders"
-        visible={showAuthPrompt}
-        onClose={() => setShowAuthPrompt(false)}
-      />
     </ScrollView>
   );
 }
@@ -398,21 +377,6 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  signInButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#00b6bd',
-    borderRadius: 10,
-    height: 42,
-    justifyContent: 'center',
-    marginTop: 12,
-    paddingHorizontal: 16,
-  },
-  signInButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
     fontWeight: '800',
   },
   orderCard: {

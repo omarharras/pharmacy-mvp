@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { Product, resolveProductImageUrl } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites-context';
 import { useRequest } from '@/lib/request-context';
@@ -26,13 +28,14 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { addProduct, decrementProduct, getProductQuantity } = useRequest();
   const { isLoggedIn } = useSession();
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const defaultUnit = product.units.find((unit) => unit.isDefault) ?? product.units[0];
   const quantity = defaultUnit ? getProductQuantity(product.id, defaultUnit.id) : 0;
   const favorited = isFavorite(product.id);
 
   const onToggleFavorite = async () => {
     if (!isLoggedIn) {
-      Alert.alert('Sign in required', 'Sign in to save favorite products.');
+      setShowAuthPrompt(true);
       return;
     }
 
@@ -44,7 +47,8 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
   };
 
   return (
-    <View style={variant === 'rail' ? styles.railCard : styles.gridCard}>
+    <>
+      <View style={variant === 'rail' ? styles.railCard : styles.gridCard}>
       <Pressable
         accessibilityLabel={favorited ? `Remove ${product.name} from favorites` : `Add ${product.name} to favorites`}
         hitSlop={8}
@@ -102,7 +106,13 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
           </Pressable>
         )}
       </View>
-    </View>
+      </View>
+      <AuthRequiredModal
+        returnTo="/favorites"
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+      />
+    </>
   );
 }
 

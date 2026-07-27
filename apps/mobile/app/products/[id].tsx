@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AuthRequiredModal } from '@/components/auth-required-modal';
 import { LoadingState } from '@/components/loading-state';
 import { QuantityControl } from '@/components/quantity-control';
 import { Product, ProductUnit, getProduct, resolveProductImageUrl } from '@/lib/api';
@@ -20,6 +21,7 @@ export default function ProductDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
@@ -65,7 +67,7 @@ export default function ProductDetailScreen() {
     }
 
     if (!isLoggedIn) {
-      Alert.alert('Sign in required', 'Sign in to save favorite products.');
+      setShowAuthPrompt(true);
       return;
     }
 
@@ -261,6 +263,11 @@ export default function ProductDetailScreen() {
           )}
         </View>
       ) : null}
+      <AuthRequiredModal
+        returnTo={productId ? `/products/${productId}` : undefined}
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+      />
     </View>
   );
 }
